@@ -15,6 +15,12 @@ cp -avf "/ctx/system_files"/. /
 # this installs a package from fedora repos
 dnf5 install -y tmux
 
+# PlasmaZones (KWin snapping zones) from the maintainer's COPR
+dnf5 -y copr enable fuddlesworth/PlasmaZones
+dnf5 -y install plasmazones
+# Disable the COPR so it isn't left enabled on the final image
+dnf5 -y copr disable fuddlesworth/PlasmaZones
+
 # Use a COPR Example:
 #
 # dnf5 -y copr enable ublue-os/staging
