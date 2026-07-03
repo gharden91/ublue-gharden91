@@ -15,6 +15,10 @@ on:
 
 env:
   IMAGE_REGISTRY: "ghcr.io/${{ github.repository_owner }}"  # do not edit
+  # PowerShell version baked into the image. Override without editing files by
+  # setting a repo variable: Settings > Secrets and variables > Actions >
+  # Variables > New variable, name PWSH_VERSION. Falls back to build.sh default.
+  PWSH_VERSION: ${{ vars.PWSH_VERSION }}
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref || github.run_id }}-${{ inputs.brand_name}}-${{ inputs.stream_name }}
