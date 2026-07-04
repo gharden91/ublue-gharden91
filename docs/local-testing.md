@@ -65,6 +65,38 @@ just build-iso     # installer ISO
 just build-raw     # raw disk image
 ```
 
+## Boot the image in a VM
+
+Boot the built qcow2 in an ephemeral QEMU VM:
+
+```bash
+just run-vm-qcow2   # alias: just run-vm
+```
+
+Notes:
+
+- It builds the qcow2 first if `output/qcow2/disk.qcow2` doesn't exist, so this
+  one command covers both build and boot.
+- The VM is served over a **web VNC console in your browser**, not a native
+  window. It prints `Connect to http://localhost:<port>` (port starts at 8006)
+  and auto-opens that URL after ~30s. If the browser doesn't open, visit the URL
+  manually.
+- Specs are hardcoded in the recipe: 4 cores, 8G RAM, 64G disk, TPM + GPU
+  enabled, using `/dev/kvm` (virtualization must be enabled on the host).
+- The VM is ephemeral (`--rm`) — Ctrl-C in the terminal discards it.
+- It boots `localhost/ublue-gharden91:latest`, i.e. whichever branch you built
+  last. To test features from multiple branches together, merge them first, then
+  rebuild.
+
+What to check once it boots:
+
+1. It reaches a Plasma login/desktop (confirms the image boots).
+2. PlasmaZones loads — *System Settings > Window Management > KWin Scripts /
+   Effects*, or drag a window to a screen edge to see zones. This can only be
+   verified in a real session, not a container.
+3. Any CLI tools run as a normal user (e.g. open a terminal and run the tool
+   directly).
+
 ## Verifying the whole thing built
 
 A successful `just build` ends with `bootc container lint` passing and prints
