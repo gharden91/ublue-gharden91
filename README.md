@@ -7,6 +7,7 @@ This repository is meant to be a template for building your own custom [bootc](h
 This image's own customizations, decisions, and workflows are documented in [`docs/`](./docs/):
 
 - [Local build & testing](./docs/local-testing.md) — how to build and test the image locally.
+- [PlasmaZones](./docs/plasmazones.md) — install approach, decisions, and maintenance.
 - [PowerShell 7](./docs/powershell.md) — install approach, decisions, and how to bump the version.
 
 # Community
