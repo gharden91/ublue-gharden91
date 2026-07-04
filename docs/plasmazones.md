@@ -45,6 +45,17 @@ belongs in the image (declarative, versioned, built once, deployed everywhere)
 rather than applied per-machine via `rpm-ostree install`. Reserve runtime
 layering for throwaway experiments.
 
+### Pin the base image to a Fedora-versioned tag
+
+The `Containerfile` uses `ghcr.io/ublue-os/bazzite-dx:stable-44` rather than
+the floating `bazzite-dx:stable` tag. `stable` jumps to whatever Fedora
+release Bazzite currently ships, but the `fuddlesworth/PlasmaZones` COPR only
+publishes builds for specific Fedora releases — if the base image bumped to a
+new Fedora version before the COPR had a matching build, `dnf5 -y install
+plasmazones` would fail. Pinning to `stable-NN` keeps both in lockstep until
+we deliberately bump. See the [Maintenance Watchlist](./README.md#maintenance-watchlist)
+for the checklist to run through before bumping.
+
 ## Maintenance
 
 - **Update:** PlasmaZones follows the COPR's latest build. Rebuilding the image

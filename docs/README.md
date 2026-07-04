@@ -8,12 +8,22 @@ Notes on this image's customizations, decisions, and workflows.
 
 ## Maintenance Watchlist
 
-This image is built on top of `ghcr.io/ublue-os/bazzite-dx:stable`, a moving
+This image is built on top of `ghcr.io/ublue-os/bazzite-dx:stable-44`, a moving
 target maintained upstream. The items below are things that can break
 silently — the build still succeeds, but the customization stops doing what
 it's supposed to — because the base image changed underneath us. Check these
 periodically, and especially whenever bumping the base image tag or after a
 build starts behaving oddly.
+
+**Why `stable-44` and not the floating `stable` tag:** `bazzite-dx:stable`
+tracks whatever Fedora release Bazzite currently ships, and jumps to the next
+major version whenever upstream cuts over. `fuddlesworth/PlasmaZones` only
+publishes COPR builds for specific Fedora releases at a time, so an
+unannounced Fedora bump on `stable` could land before PlasmaZones has a
+matching build, breaking the image build with no warning. Pinning to the
+version-suffixed tag (`stable-44`) keeps the base image's Fedora version
+fixed until we deliberately choose to move — see "Bumping the Fedora version"
+below.
 
 Each customization's own doc has the full "Decisions"/"Maintenance" writeup;
 this list is just the "what could rot" summary in one place.
@@ -23,14 +33,28 @@ this list is just the "what could rot" summary in one place.
 - **Base image still ships KDE Plasma.** PlasmaZones is a KWin extension and
   is dead weight (or a build failure) on a non-Plasma desktop. Confirm
   `bazzite-dx` hasn't switched its default DE before/after a base image bump.
-- **The COPR still builds for the Fedora version `bazzite-dx` tracks.** When
-  `bazzite-dx` bumps its underlying Fedora release, `fuddlesworth/PlasmaZones`
-  needs a matching COPR build or `dnf5 -y install plasmazones` will fail during
-  the image build. Check the COPR page before/after a Fedora version bump.
+- **The COPR still builds for the Fedora version this image is pinned to.**
+  Check the [COPR package page](https://copr.fedorainfracloud.org/coprs/fuddlesworth/PlasmaZones/package/plasmazones/)
+  before bumping the `stable-NN` tag in the `Containerfile` — see "Bumping the
+  Fedora version" below.
 - **Upstream project is still maintained.** It's a single-maintainer COPR; if
   it goes stale or disappears, the build breaks outright. Check
   [fuddlesworth/PlasmaZones](https://github.com/fuddlesworth/PlasmaZones) for
   activity periodically.
+
+### Bumping the Fedora version
+
+The `Containerfile`'s `FROM` line is pinned to `ghcr.io/ublue-os/bazzite-dx:stable-44`
+specifically so it and the PlasmaZones COPR stay on the same Fedora release.
+Before moving to `stable-45` (or later):
+
+1. Confirm `fuddlesworth/PlasmaZones` has a COPR build for the target Fedora
+   version.
+2. Bump the `FROM` tag in the `Containerfile` and rebuild locally
+   (see [local-testing.md](./local-testing.md)) to confirm `plasmazones` still
+   installs and `pwsh` still runs.
+3. Only merge the bump once both checks pass — don't let the base image and
+   the COPR drift to different Fedora versions.
 
 ### PowerShell 7 (see [powershell.md](./powershell.md))
 
