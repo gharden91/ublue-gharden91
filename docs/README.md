@@ -49,11 +49,28 @@ specifically so it and the PlasmaZones COPR stay on the same Fedora release.
 Before moving to `stable-45` (or later):
 
 1. Confirm `fuddlesworth/PlasmaZones` has a COPR build for the target Fedora
-   version.
-2. Bump the `FROM` tag in the `Containerfile` and rebuild locally
+   version and architecture on the
+   [COPR package page](https://copr.fedorainfracloud.org/coprs/fuddlesworth/PlasmaZones/package/plasmazones/)
+   (look for a populated `Fedora <NN> - x86_64` chroot, not just `rawhide`).
+2. Confirm which Fedora version a candidate base image tag actually is before
+   pointing the `Containerfile` at it — the tag name is the source of truth
+   (Universal Blue's `stable-NN` suffix *is* the Fedora major version), but you
+   can double check directly against the image:
+
+   ```bash
+   podman run --rm ghcr.io/ublue-os/bazzite-dx:<tag> sh -c 'grep VERSION_ID= /etc/os-release; uname -m'
+   ```
+
+   If you're already booted into this image (rebased and rebooted), you can
+   run the same check directly on the machine instead of pulling anything:
+
+   ```bash
+   grep VERSION_ID= /etc/os-release; uname -m
+   ```
+3. Bump the `FROM` tag in the `Containerfile` and rebuild locally
    (see [local-testing.md](./local-testing.md)) to confirm `plasmazones` still
    installs and `pwsh` still runs.
-3. Only merge the bump once both checks pass — don't let the base image and
+4. Only merge the bump once all checks pass — don't let the base image and
    the COPR drift to different Fedora versions.
 
 ### PowerShell 7 (see [powershell.md](./powershell.md))
