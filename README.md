@@ -2,6 +2,13 @@
 
 This repository is meant to be a template for building your own custom [bootc](https://github.com/bootc-dev/bootc) image. This template is the recommended way to make customizations to any image published by the Universal Blue Project.
 
+# Documentation
+
+This image's own customizations, decisions, and workflows are documented in [`docs/`](./docs/):
+
+- [Local build & testing](./docs/local-testing.md) — how to build and test the image locally.
+- [PowerShell 7](./docs/powershell.md) — install approach, decisions, and how to bump the version.
+
 # Community
 
 If you have questions about this template after following the instructions, try the following spaces:
