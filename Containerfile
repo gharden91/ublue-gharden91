@@ -4,7 +4,11 @@ COPY build_files /
 COPY system_files /system_files
 
 # Base Image
-FROM ghcr.io/ublue-os/bazzite-dx:stable
+# Pinned to stable-44 (rather than the floating "stable" tag) to keep the
+# Fedora version in lockstep with the fuddlesworth/PlasmaZones COPR, which
+# only ships builds for specific Fedora releases. See docs/README.md's
+# Maintenance Watchlist before bumping this to stable-45.
+FROM ghcr.io/ublue-os/bazzite-dx:stable-44
 ## Other possible base images include:
 # FROM ghcr.io/ublue-os/bazzite:testing
 # FROM ghcr.io/ublue-os/aurora:stable
