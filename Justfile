@@ -103,6 +103,10 @@ build $target_image=image_name $tag=default_tag:
     if [[ -n "${PWSH_VERSION:-}" ]]; then
         BUILD_ARGS+=("--build-arg" "PWSH_VERSION=${PWSH_VERSION}")
     fi
+    # Forward PlasmaZones version if provided via env (set in CI from a repo variable)
+    if [[ -n "${PLASMAZONES_VERSION:-}" ]]; then
+        BUILD_ARGS+=("--build-arg" "PLASMAZONES_VERSION=${PLASMAZONES_VERSION}")
+    fi
     LABELS=()
     if [[ -z "$(git status -s)" ]]; then
         GIT_SHA=$(git rev-parse --short HEAD)
