@@ -52,59 +52,72 @@ kwin_wayland --version   # running KWin
 rpm -q plasmazones       # installed PlasmaZones build
 ```
 
-### Known break (July 2026): zones inert on KWin 6.7.1
+### KWin version skew: current status (July 2026)
 
-As of 2026-07-11 the effect is inert on deployed machines ("window manager
-integration inactive" notification). The base image ships KWin **6.7.1**, and
-no PlasmaZones release was built against it — upstream's builds jump straight
-from 6.7.0 (v3.1.2, June 26) to 6.7.2 (v3.1.3, July 1), so there is nothing to
-pin that would load. This is a known, accepted break, not a packaging bug on
-our side:
+The base image ships KWin **6.7.1**. The original COPR install went inert on
+deployed machines ("window manager integration inactive" notification) because
+the COPR build of v3.1.3 was compiled against **6.7.2** — the COPR
+auto-rebuilds against Fedora's latest KWin, which had moved ahead of the base
+image. **Switching to the pinned GitHub release RPM resolved it:** upstream's
+v3.1.3 release asset is a frozen July-1 build compiled against **6.7.1**
+(before Fedora updated KWin), so it matches the base image and the effect
+loads. The build log's skew check confirms it — `plugin embeds KWin
+6.7.x=[6.7.1]` → `matches image KWin 6.7.1`.
 
-- **It resolves on its own.** Bazzite's testing channel picked up KWin 6.7.2
-  on July 9; once it reaches stable, the daily rebuild aligns the pinned
-  v3.1.3 with the running KWin and zones start working after an update +
-  reboot. The build log's skew check flips from `WARNING` to
-  `PlasmaZones effect plugin matches image KWin ...` — that's the signal it's
-  over.
-- **Meanwhile it's harmless.** KWin never loads the mismatched plugin; the
-  only symptom is the notification and zones not working.
-- **Revisit later.** Upstream is under very active development (130+ releases;
-  v3.0.17/v3.1.3 specifically reworked how the KWin version coupling is
-  handled and notified). If a future release decouples the effect from exact
-  KWin versions, the pin-must-track-KWin constraint documented above relaxes
-  and this section plus the skew check can be simplified. Delete this section
-  once the break has resolved.
+This is a **version coincidence, not a permanent fix.** The release asset
+happened to be built against the KWin the base image ships; nothing guarantees
+that holds after the next KWin move, so treat the skew as a recurring
+maintenance condition rather than a one-time bug:
+
+- **The skew recurs on KWin bumps.** When Bazzite moves to a newer KWin
+  (6.7.2, 6.8.x, …), the currently-pinned release becomes the mismatched one,
+  and the release you'd bump *to* may be built against a KWin ahead of or
+  behind the base image — upstream controls their build target, not us.
+- **The build log is the signal.** On a mismatch the skew check prints
+  `WARNING: PlasmaZones … is not built against this image's KWin …`. When you
+  see it, bump `PLASMAZONES_VERSION` to a release built against the base
+  image's KWin (see the workarounds below), or wait for one to exist.
+- **Meanwhile a mismatch is harmless.** KWin never loads a non-matching
+  plugin; the only symptom is the notification and zones not working.
+- **Upstream is iterating on this.** 130+ releases; v3.0.17/v3.1.3 specifically
+  reworked how the KWin version coupling is handled and notified. If a future
+  release decouples the effect from an exact KWin version, the
+  pin-must-track-KWin constraint relaxes and this section plus the skew check
+  can be simplified.
 
 ### Workarounds considered
 
-Evaluated during the July 2026 break; recorded here so the next skew window
-doesn't re-derive them.
+Evaluated during the July 2026 skew; recorded here so the next one doesn't
+re-derive them.
 
-**Wait for the base image to catch up** *(chosen)*
+**Pin a release built against the running KWin** *(current approach)*
 
-- Pros: zero code, zero new maintenance; Bazzite typically picks up KWin point
-  releases within days–weeks; the break is harmless in the meantime (plugin
-  stays inert, nothing crashes).
-- Cons: zones don't work during the window, which recurs on every KWin point
-  release where upstream rebuilds before Bazzite rebases.
-
-**Pin a release built against the running KWin**
-
-- Pros: when such a release exists, it makes zones work *immediately* — this
-  is the main payoff of the pinned-release install. Check a candidate RPM
-  without installing it:
+- Pros: when such a release exists, zones work immediately — this is the main
+  payoff of the pinned-release install, and it's what resolved the July 2026
+  skew (the v3.1.3 release asset was built against 6.7.1, matching the base
+  image, whereas the COPR build of the same version was 6.7.2). Check a
+  candidate RPM without installing it:
 
   ```bash
-  rpm2cpio plasmazones-<ver>-1.fc44.x86_64.rpm | cpio -i --to-stdout '*kwin*.so' \
-      | grep -ao '6\.7\.[0-9]*' | sort | uniq -c
+  rpm2cpio plasmazones-<ver>-1.fc44.x86_64.rpm | cpio -i --to-stdout '*plasmazones.so' \
+      | grep -aoE '6\.7\.[0-9]+' | sort | uniq -c
   ```
 
-  (Beware the `kwin >= 6.7.0` minimum-dependency string also matches; the
-  built-for stamp is the version that appears alongside it.)
-- Cons: only works if upstream happened to cut a release against that exact
-  KWin. In July 2026 they didn't — builds jumped 6.7.0 → 6.7.2 straight over
-  the base image's 6.7.1.
+  The built-against version is the single `6.7.x` string the plugin embeds
+  (verified: the COPR 6.7.2 build shows exactly `1 6.7.2`; the release build
+  embeds `6.7.1` per the build-log skew check).
+- Cons: only works when upstream cut a release against that exact KWin.
+  Release assets are frozen point-in-time builds, so after a base-image KWin
+  bump you may have to wait for upstream to publish a matching one — which is
+  the fallback below.
+
+**Wait for the base image and a matching release to line up** *(fallback)*
+
+- Pros: zero code, zero new maintenance; Bazzite typically picks up KWin point
+  releases within days–weeks, and upstream rebuilds around the same time; the
+  skew is harmless in the meantime (plugin stays inert, nothing crashes).
+- Cons: zones don't work during the window, which recurs whenever the base
+  image's KWin and an available release's build target drift apart.
 
 **Build from source against the base image's KWin**
 
