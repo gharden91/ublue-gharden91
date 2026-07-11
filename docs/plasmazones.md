@@ -76,6 +76,61 @@ our side:
   and this section plus the skew check can be simplified. Delete this section
   once the break has resolved.
 
+### Workarounds considered
+
+Evaluated during the July 2026 break; recorded here so the next skew window
+doesn't re-derive them.
+
+**Wait for the base image to catch up** *(chosen)*
+
+- Pros: zero code, zero new maintenance; Bazzite typically picks up KWin point
+  releases within days–weeks; the break is harmless in the meantime (plugin
+  stays inert, nothing crashes).
+- Cons: zones don't work during the window, which recurs on every KWin point
+  release where upstream rebuilds before Bazzite rebases.
+
+**Pin a release built against the running KWin**
+
+- Pros: when such a release exists, it makes zones work *immediately* — this
+  is the main payoff of the pinned-release install. Check a candidate RPM
+  without installing it:
+
+  ```bash
+  rpm2cpio plasmazones-<ver>-1.fc44.x86_64.rpm | cpio -i --to-stdout '*kwin*.so' \
+      | grep -ao '6\.7\.[0-9]*' | sort | uniq -c
+  ```
+
+  (Beware the `kwin >= 6.7.0` minimum-dependency string also matches; the
+  built-for stamp is the version that appears alongside it.)
+- Cons: only works if upstream happened to cut a release against that exact
+  KWin. In July 2026 they didn't — builds jumped 6.7.0 → 6.7.2 straight over
+  the base image's 6.7.1.
+
+**Build from source against the base image's KWin**
+
+- Pros: a correct-by-construction match every build; standard CMake project,
+  cleanly done as a multi-stage `Containerfile` build (~30–50 lines, +5–10 min
+  per build, no size impact on the final image).
+- Cons: the guarantee depends on installing `kwin-devel` at the *exact*
+  version the base image runs, and Fedora's repos only carry the latest —
+  during a skew window (precisely when you need it) the matching devel package
+  has already rotated out to Koji archives. Also forfeits upstream's packaging
+  (manual tag bumps, tracking their cmake flags/paths), and their build system
+  moves fast. Rejected as more machinery for a guarantee that fails exactly
+  when needed.
+
+**Switch to [KZones](https://github.com/gerritdevriese/kzones)**
+
+- Pros: it's a KWin *script* (JavaScript), so this entire class of
+  compiled-against-the-wrong-KWin breakage cannot happen; would also drop the
+  external RPM from the build entirely (plain files under
+  `/usr/share/kwin/scripts/` via `system_files/`).
+- Cons: mainline KZones lacks multi-zone spanning — the feature that motivated
+  PlasmaZones over KDE's built-in tiling in the first place. A fork adds it,
+  but depending on a fork of a hobby project is a worse maintenance bet than
+  the skew window. Kept as the fallback if the PlasmaZones COPR/releases ever
+  go stale (see the [watchlist](./README.md#maintenance-watchlist)).
+
 ## Decisions
 
 ### Pinned release RPM, not the COPR
