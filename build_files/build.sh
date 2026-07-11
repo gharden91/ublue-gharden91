@@ -32,15 +32,24 @@ rm -f /tmp/plasmazones.rpm
 
 # Surface (but don't fail on) KWin version skew: the PlasmaZones effect only
 # loads under the exact KWin it was built against, so flag a mismatch in the
-# build log instead of finding out from a desktop notification later.
+# build log instead of finding out from a desktop notification later. The
+# built-against version is embedded as a string in the effect plugin (and, in
+# practice, appears exactly once), so we read it back and compare.
 PLASMAZONES_PLUGIN="$(rpm -ql plasmazones | grep -E '/kwin/.*\.so$' | head -n1)" || PLASMAZONES_PLUGIN=""
 KWIN_VERSION="$(rpm -q --whatprovides --qf '%{VERSION}\n' kwin | head -n1)" || KWIN_VERSION=""
-if [[ -n "${PLASMAZONES_PLUGIN}" && "${KWIN_VERSION}" =~ ^[0-9] ]]; then
-    if grep -aq "${KWIN_VERSION}" "${PLASMAZONES_PLUGIN}"; then
-        echo "PlasmaZones effect plugin matches image KWin ${KWIN_VERSION}"
+if [[ -n "${PLASMAZONES_PLUGIN}" && "${KWIN_VERSION}" =~ ^[0-9]+\.[0-9]+\.[0-9]+ ]]; then
+    # Build a "6[.]7[.][0-9]+" regex from the running KWin's X.Y series so the
+    # diagnostic ignores unrelated Qt/KF version strings in the binary, and log
+    # every same-series version the plugin embeds (not just a yes/no match).
+    KWIN_MM="${KWIN_VERSION%.*}"           # 6.7.1 -> 6.7
+    KWIN_RE="${KWIN_MM%.*}[.]${KWIN_MM#*.}[.][0-9]+"   # -> 6[.]7[.][0-9]+
+    PLUGIN_KWIN_VERS="$(grep -aEo "${KWIN_RE}" "${PLASMAZONES_PLUGIN}" | sort -u | paste -sd' ' -)" || PLUGIN_KWIN_VERS=""
+    echo "PlasmaZones skew check: image KWin=${KWIN_VERSION}; plugin embeds KWin ${KWIN_MM}.x=[${PLUGIN_KWIN_VERS:-none}]"
+    if printf '%s\n' ${PLUGIN_KWIN_VERS} | grep -qxF "${KWIN_VERSION}"; then
+        echo "PlasmaZones effect plugin matches image KWin ${KWIN_VERSION} — zones will load."
     else
-        echo "WARNING: PlasmaZones ${PLASMAZONES_VERSION} does not appear to be built against this image's KWin ${KWIN_VERSION}." >&2
-        echo "WARNING: The effect will stay inert (zones won't work) until the versions align — see docs/plasmazones.md." >&2
+        echo "WARNING: PlasmaZones ${PLASMAZONES_VERSION} is not built against this image's KWin ${KWIN_VERSION} (embeds [${PLUGIN_KWIN_VERS:-none}])." >&2
+        echo "WARNING: The effect will stay inert (zones won't work) until the versions align — pin a matching release or see docs/plasmazones.md." >&2
     fi
 else
     echo "WARNING: could not determine PlasmaZones/KWin versions for the skew check (plugin='${PLASMAZONES_PLUGIN}', kwin='${KWIN_VERSION}')" >&2
