@@ -52,6 +52,30 @@ kwin_wayland --version   # running KWin
 rpm -q plasmazones       # installed PlasmaZones build
 ```
 
+### Known break (July 2026): zones inert on KWin 6.7.1
+
+As of 2026-07-11 the effect is inert on deployed machines ("window manager
+integration inactive" notification). The base image ships KWin **6.7.1**, and
+no PlasmaZones release was built against it — upstream's builds jump straight
+from 6.7.0 (v3.1.2, June 26) to 6.7.2 (v3.1.3, July 1), so there is nothing to
+pin that would load. This is a known, accepted break, not a packaging bug on
+our side:
+
+- **It resolves on its own.** Bazzite's testing channel picked up KWin 6.7.2
+  on July 9; once it reaches stable, the daily rebuild aligns the pinned
+  v3.1.3 with the running KWin and zones start working after an update +
+  reboot. The build log's skew check flips from `WARNING` to
+  `PlasmaZones effect plugin matches image KWin ...` — that's the signal it's
+  over.
+- **Meanwhile it's harmless.** KWin never loads the mismatched plugin; the
+  only symptom is the notification and zones not working.
+- **Revisit later.** Upstream is under very active development (130+ releases;
+  v3.0.17/v3.1.3 specifically reworked how the KWin version coupling is
+  handled and notified). If a future release decouples the effect from exact
+  KWin versions, the pin-must-track-KWin constraint documented above relaxes
+  and this section plus the skew check can be simplified. Delete this section
+  once the break has resolved.
+
 ## Decisions
 
 ### Pinned release RPM, not the COPR
