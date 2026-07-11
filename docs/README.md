@@ -17,28 +17,37 @@ build starts behaving oddly.
 
 **Why `stable-44` and not the floating `stable` tag:** `bazzite-dx:stable`
 tracks whatever Fedora release Bazzite currently ships, and jumps to the next
-major version whenever upstream cuts over. `fuddlesworth/PlasmaZones` only
-publishes COPR builds for specific Fedora releases at a time, so an
-unannounced Fedora bump on `stable` could land before PlasmaZones has a
-matching build, breaking the image build with no warning. Pinning to the
-version-suffixed tag (`stable-44`) keeps the base image's Fedora version
-fixed until we deliberately choose to move — see "Bumping the Fedora version"
-below.
+major version whenever upstream cuts over. PlasmaZones release assets are
+built per Fedora version (`.fc44`, `.fc45`, …), so an unannounced Fedora bump
+on `stable` could land before PlasmaZones has a matching build, breaking the
+image build with no warning. Pinning to the version-suffixed tag (`stable-44`)
+keeps the base image's Fedora version fixed until we deliberately choose to
+move — see "Bumping the Fedora version" below.
 
 Each customization's own doc has the full "Decisions"/"Maintenance" writeup;
 this list is just the "what could rot" summary in one place.
 
 ### PlasmaZones (see [plasmazones.md](./plasmazones.md))
 
+- **The pinned build still matches the base image's KWin.** The compiled KWin
+  effect only loads under the exact KWin it was built against; on a mismatch
+  it stays inert (with a desktop notification) even though the build succeeds.
+  `build.sh` prints a `WARNING` in the build log when the installed plugin
+  doesn't match the image's KWin — check for it after bumping
+  `PLASMAZONES_VERSION` and whenever Bazzite moves to a new KWin point
+  release. Expect to bump the pin shortly after each base-image KWin update.
+- **New releases to pin.** `PLASMAZONES_VERSION` is pinned and does not
+  auto-update. Check
+  [PlasmaZones releases](https://github.com/fuddlesworth/PlasmaZones/releases)
+  periodically and bump the `PLASMAZONES_VERSION` repo variable.
+- **Release assets keep their current shape.** The download URL assumes a
+  `plasmazones-<version>-1.fc<NN>.x86_64.rpm` asset per release. If upstream
+  renames assets or stops publishing Fedora RPMs, the build breaks outright.
 - **Base image still ships KDE Plasma.** PlasmaZones is a KWin extension and
   is dead weight (or a build failure) on a non-Plasma desktop. Confirm
   `bazzite-dx` hasn't switched its default DE before/after a base image bump.
-- **The COPR still builds for the Fedora version this image is pinned to.**
-  Check the [COPR package page](https://copr.fedorainfracloud.org/coprs/fuddlesworth/PlasmaZones/package/plasmazones/)
-  before bumping the `stable-NN` tag in the `Containerfile` — see "Bumping the
-  Fedora version" below.
-- **Upstream project is still maintained.** It's a single-maintainer COPR; if
-  it goes stale or disappears, the build breaks outright. Check
+- **Upstream project is still maintained.** It's a single-maintainer project;
+  if it goes stale or disappears, the build breaks outright. Check
   [fuddlesworth/PlasmaZones](https://github.com/fuddlesworth/PlasmaZones) for
   activity periodically.
 
@@ -48,10 +57,11 @@ The `Containerfile`'s `FROM` line is pinned to `ghcr.io/ublue-os/bazzite-dx:stab
 specifically so it and the PlasmaZones COPR stay on the same Fedora release.
 Before moving to `stable-45` (or later):
 
-1. Confirm `fuddlesworth/PlasmaZones` has a COPR build for the target Fedora
-   version and architecture on the
-   [COPR package page](https://copr.fedorainfracloud.org/coprs/fuddlesworth/PlasmaZones/package/plasmazones/)
-   (look for a populated `Fedora <NN> - x86_64` chroot, not just `rawhide`).
+1. Confirm the pinned PlasmaZones release has an RPM asset for the target
+   Fedora version on the
+   [releases page](https://github.com/fuddlesworth/PlasmaZones/releases)
+   (look for `plasmazones-<version>-1.fc<NN>.x86_64.rpm` — the download URL in
+   `build.sh` derives `fc<NN>` from the base image automatically).
 2. Confirm which Fedora version a candidate base image tag actually is before
    pointing the `Containerfile` at it — the tag name is the source of truth
    (Universal Blue's `stable-NN` suffix *is* the Fedora major version), but you

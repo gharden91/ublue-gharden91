@@ -36,12 +36,14 @@ FROM ghcr.io/ublue-os/bazzite-dx:stable-44
 
 # PowerShell version, overridable at build time (--build-arg PWSH_VERSION=...)
 ARG PWSH_VERSION=7.5.2
+# PlasmaZones version, overridable at build time (--build-arg PLASMAZONES_VERSION=...)
+ARG PLASMAZONES_VERSION=3.1.3
 
 RUN --mount=type=bind,from=ctx,source=/,target=/ctx \
     --mount=type=cache,dst=/var/cache \
     --mount=type=cache,dst=/var/log \
     --mount=type=tmpfs,dst=/tmp \
-    PWSH_VERSION="${PWSH_VERSION}" /ctx/build.sh
+    PWSH_VERSION="${PWSH_VERSION}" PLASMAZONES_VERSION="${PLASMAZONES_VERSION}" /ctx/build.sh
 
 ### LINTING
 ## Verify final image and contents are correct.

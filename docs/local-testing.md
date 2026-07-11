@@ -17,13 +17,15 @@ just build
 This wraps `podman build` and tags the result `localhost/ublue-gharden91:latest`
 (name/tag come from `image-template.env`).
 
-Build with a specific PowerShell version (see `docs/powershell.md`):
+Build with a specific PowerShell or PlasmaZones version (see
+`docs/powershell.md` / `docs/plasmazones.md`):
 
 ```bash
 PWSH_VERSION=7.5.2 just build
+PLASMAZONES_VERSION=3.1.3 just build
 ```
 
-Changing `PWSH_VERSION` re-downloads that tarball; otherwise rebuilds are fast.
+Changing either version re-downloads that release; otherwise rebuilds are fast.
 
 Raw equivalent if you don't have `just`:
 
