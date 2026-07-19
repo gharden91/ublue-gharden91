@@ -19,6 +19,9 @@ env:
   # setting a repo variable: Settings > Secrets and variables > Actions >
   # Variables > New variable, name PWSH_VERSION. Falls back to build.sh default.
   PWSH_VERSION: ${{ vars.PWSH_VERSION }}
+  # PlasmaZones version baked into the image. Same override mechanism as
+  # PWSH_VERSION: repo variable PLASMAZONES_VERSION, else build.sh default.
+  PLASMAZONES_VERSION: ${{ vars.PLASMAZONES_VERSION }}
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref || github.run_id }}-${{ inputs.brand_name}}-${{ inputs.stream_name }}

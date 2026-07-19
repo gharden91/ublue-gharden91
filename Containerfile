@@ -4,7 +4,11 @@ COPY build_files /
 COPY system_files /system_files
 
 # Base Image
-FROM ghcr.io/ublue-os/bazzite-dx:stable
+# Pinned to stable-44 (rather than the floating "stable" tag) to keep the
+# Fedora version in lockstep with the fuddlesworth/PlasmaZones COPR, which
+# only ships builds for specific Fedora releases. See docs/README.md's
+# Maintenance Watchlist before bumping this to stable-45.
+FROM ghcr.io/ublue-os/bazzite-dx:stable-44
 ## Other possible base images include:
 # FROM ghcr.io/ublue-os/bazzite:testing
 # FROM ghcr.io/ublue-os/aurora:stable
@@ -35,12 +39,14 @@ RUN rm /opt && mkdir /opt
 
 # PowerShell version, overridable at build time (--build-arg PWSH_VERSION=...)
 ARG PWSH_VERSION=7.5.2
+# PlasmaZones version, overridable at build time (--build-arg PLASMAZONES_VERSION=...)
+ARG PLASMAZONES_VERSION=3.1.3
 
 RUN --mount=type=bind,from=ctx,source=/,target=/ctx \
     --mount=type=cache,dst=/var/cache \
     --mount=type=cache,dst=/var/log \
     --mount=type=tmpfs,dst=/tmp \
-    PWSH_VERSION="${PWSH_VERSION}" /ctx/build.sh
+    PWSH_VERSION="${PWSH_VERSION}" PLASMAZONES_VERSION="${PLASMAZONES_VERSION}" /ctx/build.sh
 
 ### LINTING
 ## Verify final image and contents are correct.
