@@ -5,7 +5,7 @@ Most commits are made with Claude Code's assistance. This image's own customizat
 - [Local build & testing](./docs/local-testing.md) — how to build and test the image locally.
 - [PlasmaZones](./docs/plasmazones.md) — install approach, decisions, and maintenance.
 - [PowerShell 7](./docs/powershell.md) — install approach, decisions, and how to bump the version.
-- [Microsoft Edge](./docs/edge.md) — on hold; native-RPM approach and the `/opt` blocker.
+- [Microsoft Edge](./docs/edge.md) — native RPM in `/opt`; the `/opt` blocker and how it was resolved.
 
 # Based on
 

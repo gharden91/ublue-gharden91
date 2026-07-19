@@ -1,9 +1,10 @@
 # Microsoft Edge
 
-> **Status: ON HOLD (not merged).** Work-in-progress lives on the `add-edge`
-> branch. The native-RPM approach works but forces `/opt` immutable, which is
-> risky on the current `bazzite-dx` base (see the blocker below). Held pending a
-> decision. Continue to use Edge via distrobox until this is resolved.
+> **Status: VM-validated (2026-07-19), pending merge.** The immutable-`/opt`
+> blocker below was tested in a VM (Option 1) and did **not** materialize on a
+> fresh install — see [Test results](#test-results-2026-07-19). Remaining
+> caveat before rebasing existing hardware: check for pre-existing
+> `/var/opt/containerd` state (see below).
 
 ## Intent
 
@@ -56,17 +57,43 @@ still exists in persistent `/var/opt`, but is no longer reachable via `/opt`).
 The Containerfile's own comment about making `/opt` immutable assumed a base
 where only *we* write to `/opt` — bazzite-dx violates that assumption.
 
-## Options (decision pending)
+## Test results (2026-07-19)
 
-1. **Test immutable `/opt` in a VM first.** Boot the `add-edge` image and verify
-   the container runtime survives:
+Option 1 below was executed: the `add-edge` image was built (`just build`), a
+qcow2 was produced (`just build-qcow2`), and the VM was booted (via direct
+`qemu-system-x86_64` — see the note in
+[local-testing.md](./local-testing.md#if-the-vm-boots-alpine-instead-of-the-image)
+about the `qemux/qemu` runner regression). In the booted VM:
+
+- **docker and containerd work.** Both were stopped at first boot (normal
+  on-demand activation) and started cleanly on `sudo docker info`.
+- **`/opt` is a real directory** containing only `microsoft/`; **`/var/opt` is
+  empty** — on a fresh install nothing populates it, so the immutable `/opt`
+  breaks nothing.
+- **Edge runs** in the Plasma session at the baked-in version (150.0.4078.83).
+
+Conclusion: immutable `/opt` is safe on a fresh install of this base; the
+native-RPM approach can merge.
+
+**Existing-machine caveat — checked and cleared (2026-07-19).** The concern was
+that machines running the old image have `/var/opt/containerd` state that
+becomes unreachable via `/opt` after rebasing. Inspection of real hardware
+showed `/var/opt/containerd` is 0 bytes: just empty `bin/` and `lib/` dirs that
+containerd's managed-opt plugin (`io.containerd.internal.v1.opt`) auto-creates
+at startup — no data, and no config (docker, containerd, systemd units)
+references `/opt/containerd` by path. The VM test additionally showed containerd
+runs fine when it cannot create `/opt/containerd` at all. Rebasing existing
+machines is safe.
+
+## Options (considered)
+
+1. **Test immutable `/opt` in a VM first.** ✅ Done — see
+   [Test results](#test-results-2026-07-19) above. Verification commands used:
    ```bash
    systemctl status containerd docker
    docker info        # or: podman info
    ls -la /opt /var/opt
    ```
-   If containerd/docker still work → immutable `/opt` is safe here; merge as-is
-   and get native Edge. If they break → abandon this approach.
 
 2. **Ship Edge as a Flatpak instead.** Flatpaks live in `/var/lib/flatpak`, so
    this avoids `/opt` entirely and leaves bazzite-dx's `/var/opt`/containerd
