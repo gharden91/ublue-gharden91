@@ -6,6 +6,8 @@ Notes on this image's customizations, decisions, and workflows.
 - [plasmazones.md](./plasmazones.md) — PlasmaZones install: intent, decisions, and maintenance.
 - [powershell.md](./powershell.md) — PowerShell 7 install: intent, decisions, and maintenance.
 - [edge.md](./edge.md) — Microsoft Edge: native-RPM install, the `/opt` blocker, and how it was resolved.
+- [discord.md](./discord.md) — Discord: official RPM, deliberately unpinned, and why rebuild cadence matters.
+- [vlc.md](./vlc.md) — VLC: Fedora + RPM Fusion packages, full codec support.
 
 ## Maintenance Watchlist
 
@@ -99,6 +101,30 @@ Before moving to `stable-45` (or later):
   hardcoded to `linux-x64`. If this image is ever built for ARM64, that string
   must be made conditional on target arch or PowerShell installation will
   silently fetch the wrong binary.
+
+### Discord (see [discord.md](./discord.md))
+
+- **Rebuild cadence is load-bearing.** Discord is installed from the official
+  unpinned "latest" RPM and hard-gates outdated clients with a mandatory
+  "update required" screen. If scheduled image rebuilds stall (broken CI,
+  disabled workflow), Discord is the first user-visible breakage — "Discord
+  won't start" usually means "the image hasn't rebuilt lately."
+- **Download URL shape.** The build assumes
+  `discord.com/api/download?platform=linux&format=rpm` keeps redirecting to an
+  installable RPM. If Discord changes or drops the RPM flavor, the build
+  breaks outright.
+- **x86_64 only.** Discord publishes no Linux ARM64 build; an ARM64 image
+  build would need this install made conditional on target arch.
+
+### VLC (see [vlc.md](./vlc.md))
+
+- **RPM Fusion free stays enabled in the base image.**
+  `vlc-plugins-freeworld` (patent-encumbered codecs) comes from RPM Fusion,
+  which bazzite ships enabled. If the base image drops it, the build breaks
+  outright.
+- **Package split stays as-is.** `vlc` (Fedora) + `vlc-plugins-freeworld`
+  (RPM Fusion) is the current packaging; a future reshuffle would need the
+  names in `build.sh` updated.
 
 ### Adding a new entry
 
