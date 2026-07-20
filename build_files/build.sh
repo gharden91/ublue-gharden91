@@ -15,6 +15,27 @@ cp -avf "/ctx/system_files"/. /
 # this installs a package from fedora repos
 dnf5 install -y tmux
 
+### Install VLC from the negativo17 fedora-multimedia repo
+# bazzite does NOT ship RPM Fusion (so vlc-plugins-freeworld doesn't exist
+# here); its multimedia stack (full ffmpeg etc.) comes from negativo17's
+# fedora-multimedia repo, whose .repo file is baked into the image but left
+# disabled. Enable it for this one transaction only — same pattern bazzite's
+# own Containerfile uses. negativo17's vlc is built full-featured against
+# that same stack, so no -freeworld codec split is needed. See docs/vlc.md.
+dnf5 install -y --enable-repo="*fedora-multimedia*" vlc
+
+### Install Discord from the official "latest" RPM
+# Deliberately NOT pinned, unlike PowerShell/PlasmaZones: Discord hard-gates
+# outdated clients with a mandatory "update required" screen, so a pinned
+# version would stop launching between bumps. Fetching latest on every image
+# rebuild keeps the client current as long as the image rebuilds regularly.
+# See docs/discord.md.
+curl -fL -o /tmp/discord.rpm \
+    "https://discord.com/api/download?platform=linux&format=rpm"
+dnf5 install -y /tmp/discord.rpm
+rm -f /tmp/discord.rpm
+echo "Installed Discord version: $(rpm -q discord)"
+
 ### Install PlasmaZones (KWin snapping zones) from a pinned GitHub release
 # Installed from the release RPM rather than the maintainer's COPR so the
 # version is pinned and only bumps deliberately (same pattern as PowerShell
