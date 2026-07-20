@@ -15,11 +15,14 @@ cp -avf "/ctx/system_files"/. /
 # this installs a package from fedora repos
 dnf5 install -y tmux
 
-### Install VLC from the Fedora + RPM Fusion repos
-# vlc itself lives in the regular Fedora repos; vlc-plugins-freeworld comes
-# from RPM Fusion free (enabled by default in the bazzite base image) and adds
-# the patent-encumbered codecs (H.264/H.265 etc.). See docs/vlc.md.
-dnf5 install -y vlc vlc-plugins-freeworld
+### Install VLC from the negativo17 fedora-multimedia repo
+# bazzite does NOT ship RPM Fusion (so vlc-plugins-freeworld doesn't exist
+# here); its multimedia stack (full ffmpeg etc.) comes from negativo17's
+# fedora-multimedia repo, whose .repo file is baked into the image but left
+# disabled. Enable it for this one transaction only — same pattern bazzite's
+# own Containerfile uses. negativo17's vlc is built full-featured against
+# that same stack, so no -freeworld codec split is needed. See docs/vlc.md.
+dnf5 install -y --enable-repo="*fedora-multimedia*" vlc
 
 ### Install Discord from the official "latest" RPM
 # Deliberately NOT pinned, unlike PowerShell/PlasmaZones: Discord hard-gates

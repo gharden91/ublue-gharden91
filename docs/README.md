@@ -7,7 +7,7 @@ Notes on this image's customizations, decisions, and workflows.
 - [powershell.md](./powershell.md) — PowerShell 7 install: intent, decisions, and maintenance.
 - [edge.md](./edge.md) — Microsoft Edge: native-RPM install, the `/opt` blocker, and how it was resolved.
 - [discord.md](./discord.md) — Discord: official RPM, deliberately unpinned, and why rebuild cadence matters.
-- [vlc.md](./vlc.md) — VLC: Fedora + RPM Fusion packages, full codec support.
+- [vlc.md](./vlc.md) — VLC: negativo17 fedora-multimedia install, why not RPM Fusion.
 
 ## Maintenance Watchlist
 
@@ -118,13 +118,13 @@ Before moving to `stable-45` (or later):
 
 ### VLC (see [vlc.md](./vlc.md))
 
-- **RPM Fusion free stays enabled in the base image.**
-  `vlc-plugins-freeworld` (patent-encumbered codecs) comes from RPM Fusion,
-  which bazzite ships enabled. If the base image drops it, the build breaks
-  outright.
-- **Package split stays as-is.** `vlc` (Fedora) + `vlc-plugins-freeworld`
-  (RPM Fusion) is the current packaging; a future reshuffle would need the
-  names in `build.sh` updated.
+- **The base image keeps shipping negativo17's `fedora-multimedia` repo file.**
+  VLC installs via `--enable-repo="*fedora-multimedia*"`, matching the
+  disabled `negativo17-fedora-multimedia.repo` baked into bazzite. If bazzite
+  renames that file or switches multimedia stacks, the build breaks outright.
+- **RPM Fusion stays out.** Bazzite has no RPM Fusion; its multimedia stack is
+  negativo17's, and the two are documented as incompatible. Don't add RPM
+  Fusion for codec-adjacent packages in future customizations.
 
 ### Adding a new entry
 
