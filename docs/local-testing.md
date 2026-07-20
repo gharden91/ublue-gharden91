@@ -130,6 +130,28 @@ Notes:
   last. To test features from multiple branches together, merge them first, then
   rebuild.
 
+### If the VM boots Alpine instead of the image
+
+As of 2026-07-19, the `docker.io/qemux/qemu` runner image (v7.37, pulled fresh
+by the recipe's `--pull=newer`) rejects our disk with
+`ERROR: Failed to read the complete GPT partition entry array!` and silently
+falls back to downloading Alpine. The qcow2 itself is fine (`qemu-img check`
+passes) — the runner's homegrown GPT probe fails against compressed qcow2s
+like bootc-image-builder's output. Older runner versions (e.g. whatever was
+cached in early July 2026) worked.
+
+Workaround: boot the disk directly with host QEMU from the repo root:
+
+```bash
+qemu-system-x86_64 -enable-kvm -m 8G -smp 4 -cpu host \
+  -drive file=output/qcow2/disk.qcow2,format=qcow2 \
+  -bios /usr/share/OVMF/OVMF_CODE.fd
+```
+
+(UEFI firmware is required; no web VNC — QEMU opens a native window. The
+longer-term fix is pinning `qemux/qemu` to a known-good tag in the Justfile
+once one is identified.)
+
 What to check once it boots:
 
 1. It reaches a Plasma login/desktop (confirms the image boots).
