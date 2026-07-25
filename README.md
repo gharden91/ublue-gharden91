@@ -6,6 +6,9 @@ Most commits are made with Claude Code's assistance. This image's own customizat
 - [PlasmaZones](./docs/plasmazones.md) — install approach, decisions, and maintenance.
 - [PowerShell 7](./docs/powershell.md) — install approach, decisions, and how to bump the version.
 - [Microsoft Edge](./docs/edge.md) — native RPM in `/opt`; the `/opt` blocker and how it was resolved.
+- [Discord](./docs/discord.md) — official RPM, deliberately unpinned, and why rebuild cadence matters.
+- [VLC](./docs/vlc.md) — negativo17 fedora-multimedia install, why not RPM Fusion.
+- [Fonts / color emoji](./docs/fonts.md) — why Chromium-based apps render tofu on stock Fedora 43+, and the fix.
 
 # Based on
 

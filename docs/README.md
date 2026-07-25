@@ -8,6 +8,7 @@ Notes on this image's customizations, decisions, and workflows.
 - [edge.md](./edge.md) — Microsoft Edge: native-RPM install, the `/opt` blocker, and how it was resolved.
 - [discord.md](./discord.md) — Discord: official RPM, deliberately unpinned, and why rebuild cadence matters.
 - [vlc.md](./vlc.md) — VLC: negativo17 fedora-multimedia install, why not RPM Fusion.
+- [fonts.md](./fonts.md) — color emoji: why Chromium-based apps render tofu on stock Fedora 43+, and the CBDT font fix.
 
 ## Maintenance Watchlist
 
@@ -125,6 +126,28 @@ Before moving to `stable-45` (or later):
 - **RPM Fusion stays out.** Bazzite has no RPM Fusion; its multimedia stack is
   negativo17's, and the two are documented as incompatible. Don't add RPM
   Fusion for codec-adjacent packages in future customizations.
+
+### Fonts / color emoji (see [fonts.md](./fonts.md))
+
+- **This workaround is still needed.** The CBDT emoji font exists only because
+  Chromium-based apps (Edge, and Electron apps like VS Code) cannot use
+  Fedora's COLRv1 `Noto Color Emoji`. When either side fixes that, delete the
+  font install and the fontconfig drop-in and go back to stock. Retest after
+  major Edge/Electron updates and after each Fedora base bump.
+- **The right emoji font still wins.** The CBDT font and Fedora's COLRv1 font
+  declare the *same* family name, so if the reject glob in
+  `system_files/etc/fonts/conf.d/99-chromium-color-emoji.conf` stops matching
+  (Fedora renames its file), resolution silently reverts to COLRv1 and emoji
+  break again with a perfectly green build. `build.sh` prints a `WARNING` when
+  `fc-match emoji` no longer resolves to the CBDT build — watch for it.
+- **The font tracks upstream `main` and is not pinned.** Rebuilds pick up new
+  emoji automatically, but also any upstream breakage. The build-time `fc-scan`
+  validation fails the build on a corrupt or non-color download; set the
+  `NOTO_EMOJI_REF` repo variable to a tag to pin if upstream regresses.
+- **The base image keeps shipping fontconfig and a COLRv1 emoji font.** The
+  drop-in assumes `/usr/share/fonts/*/Noto-COLRv1*.ttf` exists to reject. If a
+  future base drops it, the reject becomes a harmless no-op — the CBDT font is
+  then the only emoji font and everything still works.
 
 ### Adding a new entry
 

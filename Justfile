@@ -107,6 +107,10 @@ build $target_image=image_name $tag=default_tag:
     if [[ -n "${PLASMAZONES_VERSION:-}" ]]; then
         BUILD_ARGS+=("--build-arg" "PLASMAZONES_VERSION=${PLASMAZONES_VERSION}")
     fi
+    # Forward Noto Color Emoji ref if provided via env (set in CI from a repo variable)
+    if [[ -n "${NOTO_EMOJI_REF:-}" ]]; then
+        BUILD_ARGS+=("--build-arg" "NOTO_EMOJI_REF=${NOTO_EMOJI_REF}")
+    fi
     LABELS=()
     if [[ -z "$(git status -s)" ]]; then
         GIT_SHA=$(git rev-parse --short HEAD)
