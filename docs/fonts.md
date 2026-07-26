@@ -1,10 +1,11 @@
 # Fonts (color emoji)
 
-> **Status: mechanism confirmed on real hardware (2026-07-25); image-level fix
-> awaiting a green build.** Installing this font at the user level restored
-> emoji in both Microsoft Edge and VS Code. The first image-level attempt used
-> a fontconfig reject rule instead of removing Fedora's font, and **CI proved
-> it did not work** — see [Verification](#verification).
+> **Status: image build verified (2026-07-26); boot test outstanding.**
+> Installing this font at the user level restored emoji in both Microsoft Edge
+> and VS Code, and the image now builds with the emoji-font assertion passing.
+> The first image-level attempt used a fontconfig reject rule instead of
+> removing Fedora's font, and **CI proved it did not work** — see
+> [Verification](#verification).
 
 ## Intent
 
@@ -131,18 +132,26 @@ WARNING: 'emoji' resolves to '/usr/share/fonts/google-noto-color-emoji-fonts/Not
 ```
 
 That is the entire reason the check now fails the build: green CI otherwise
-means nothing here. The deletion approach was verified to resolve correctly
-(including that the rebuilt cache stops advertising the removed file), but on
-a different fontconfig than the image's — so the authoritative check is the
-build log.
+means nothing here.
+
+**The deletion approach builds clean.** The image build (2026-07-26) logs the
+whole sequence, with no `ERROR` or `WARNING` anywhere in the run:
+
+```
+Noto Color Emoji (CBDT) from ref 'main': 10673480 bytes, validated.
+Removing Fedora's COLRv1 emoji font: /usr/share/fonts/google-noto-color-emoji-fonts/Noto-COLRv1.ttf
+Emoji font check: 'emoji' resolves to the CBDT build — Chromium-based apps OK.
+```
+
+Because the assertion is fatal, a build that completes is itself the evidence
+that `fc-match emoji` resolves to the working font inside the image.
 
 Still outstanding before rebasing hardware:
 
-- Confirm the build log shows the font validating **and**
-  `Emoji font check: 'emoji' resolves to the CBDT build`. With the check now
-  fatal, a green build is sufficient evidence.
 - Boot it (see [local-testing.md](./local-testing.md)) and confirm emoji render
-  in Edge and VS Code from the image itself, with no user-level font installed.
+  in Edge and VS Code from the image itself. The build proves font *resolution*
+  is right; it does not prove Chromium renders it, which is the thing that was
+  actually broken.
 - Make sure `~/.local/share/fonts/NotoColorEmoji.ttf` is gone from the test
   machine, or it will mask a failure of the image-level fix.
 
