@@ -1,9 +1,10 @@
 # Fonts (color emoji)
 
-> **Status: fix confirmed on real hardware (2026-07-25).** The user-level
-> equivalent of this change was tested on a booted machine and restored emoji
-> in both Microsoft Edge and VS Code. The image-level version has not yet been
-> built or VM-tested — see [Verification](#verification).
+> **Status: mechanism confirmed on real hardware (2026-07-25); image-level fix
+> awaiting a green build.** Installing this font at the user level restored
+> emoji in both Microsoft Edge and VS Code. The first image-level attempt used
+> a fontconfig reject rule instead of removing Fedora's font, and **CI proved
+> it did not work** — see [Verification](#verification).
 
 ## Intent
 
@@ -56,22 +57,33 @@ things make the scope easy to misread:
 1. `build_files/build.sh` installs upstream's CBDT (bitmap) build of Noto Color
    Emoji — a format Chromium has supported for years — to
    `/usr/share/fonts/noto-color-emoji-cbdt/NotoColorEmoji.ttf`.
-2. `system_files/etc/fonts/conf.d/99-chromium-color-emoji.conf` rejects the
-   COLRv1 file.
+2. It then **deletes** Fedora's `Noto-COLRv1.ttf` and rebuilds the font cache.
+3. It asserts `fc-match emoji` resolves to the CBDT build, and **fails the
+   build** if not.
 
 **Step 2 is not optional.** Both files declare the identical family name
 `Noto Color Emoji`, so with both present the winner is decided by fontconfig's
-scan order — which resolves to the COLRv1 file. Installing the font without the
-reject rule leaves emoji exactly as broken as before. (At the user level this
-does not come up: `~/.local/share/fonts` outranks `/usr/share/fonts`, which is
-why the confirmation test below works without any config.)
+scan order — and it picks COLRv1, the broken one. Installing the font without
+removing the other leaves emoji exactly as broken as before. (At the user level
+this does not come up: `~/.local/share/fonts` outranks `/usr/share/fonts`,
+which is why the confirmation test below works with no other change.)
+
+### Why deletion and not a fontconfig rule
+
+The first version of this fix kept Fedora's font and added a
+`<selectfont><rejectfont><glob>` drop-in to `/etc/fonts/conf.d/` instead. That
+is the tidier approach and it demonstrably works on some distributions'
+fontconfig — but **it does not work on this base image**. The drop-in was
+copied into place correctly and had no effect: `fc-match emoji` still resolved
+to COLRv1. Deleting the file is behaviour rather than configuration, so it
+doesn't depend on fontconfig semantics that vary between fontconfig builds.
 
 ## Decisions
 
-- **Add a font rather than remove Fedora's package.** Every non-Chromium app on
-  the system renders COLRv1 correctly today, and removing
-  `google-noto-color-emoji-fonts` from a derived image is a much bigger hammer
-  than shipping one extra file. The reject rule is also trivially reversible.
+- **Delete the font file, not the RPM.** `google-noto-color-emoji-fonts` is
+  pulled in by `default-fonts-core-emoji`, so `dnf5 remove` would cascade into
+  the desktop metapackages. Removing the single file achieves the same result
+  with no dependency surprises, and reverting is deleting a few lines.
 - **Upstream download, not a Fedora package.** Fedora has no CBDT subpackage
   to install, so the font comes from
   [googlefonts/noto-emoji](https://github.com/googlefonts/noto-emoji).
@@ -91,10 +103,11 @@ why the confirmation test below works without any config.)
   no way to answer per-application, so Firefox and Qt/GTK get the CBDT font
   too. Bitmap emoji are slightly less crisp at very large sizes. That's the
   cost of one consistent, working emoji font system-wide.
-- **The build asserts which font wins.** Both files claim the same family name,
-  so a silent revert to COLRv1 is a realistic failure mode with a perfectly
-  green build. `build.sh` prints a `WARNING` if `fc-match emoji` stops
-  resolving to the CBDT build — same approach as the PlasmaZones skew check.
+- **The build fails, not warns, if the wrong font wins.** This is not
+  hypothetical: the first attempt shipped a perfectly green CI build that still
+  had broken emoji, and only the build-log check revealed it. A warning nobody
+  reads is worth very little for a failure whose only other symptom is "emoji
+  are broken again three weeks from now", so it exits non-zero.
 
 ## Verification
 
@@ -108,19 +121,30 @@ curl -fLo ~/.local/share/fonts/NotoColorEmoji.ttf \
 fc-cache -f
 ```
 
-The reject-rule mechanism (both fonts installed system-wide, CBDT winning
-deterministically) was verified separately against a real Chromium, including
-the negative case: with both fonts under `/usr/share/fonts` and no reject rule,
-`fc-match emoji` resolves to COLRv1.
+**The first image-level attempt failed, and CI caught it.** Using a fontconfig
+reject rule instead of deleting the file produced a successful build whose log
+contained:
+
+```
+WARNING: 'emoji' resolves to '/usr/share/fonts/google-noto-color-emoji-fonts/Noto-COLRv1.ttf',
+         not /usr/share/fonts/noto-color-emoji-cbdt/NotoColorEmoji.ttf.
+```
+
+That is the entire reason the check now fails the build: green CI otherwise
+means nothing here. The deletion approach was verified to resolve correctly
+(including that the rebuilt cache stops advertising the removed file), but on
+a different fontconfig than the image's — so the authoritative check is the
+build log.
 
 Still outstanding before rebasing hardware:
 
-- Build the image (`just build`) and confirm the build log shows the font
-  validating and `Emoji font check: 'emoji' resolves to the CBDT build`.
+- Confirm the build log shows the font validating **and**
+  `Emoji font check: 'emoji' resolves to the CBDT build`. With the check now
+  fatal, a green build is sufficient evidence.
 - Boot it (see [local-testing.md](./local-testing.md)) and confirm emoji render
   in Edge and VS Code from the image itself, with no user-level font installed.
-- Remove the user-level `~/.local/share/fonts/NotoColorEmoji.ttf` from the test
-  machine afterwards, or it will mask a failure of the image-level fix.
+- Make sure `~/.local/share/fonts/NotoColorEmoji.ttf` is gone from the test
+  machine, or it will mask a failure of the image-level fix.
 
 A quick in-app test page, once booted:
 
@@ -136,7 +160,7 @@ failure but isn't one.
 
 - **Recheck whether this workaround is still needed.** This exists because
   Chromium can't use Fedora's COLRv1 build. When either side fixes that, the
-  right move is to delete the font install and the fontconfig drop-in and go
+  right move is to delete the font install and the COLRv1 removal and go
   back to stock. Retest after major Edge/Electron updates and after each Fedora
   base bump.
 - **Rebuild cadence carries font updates.** The font tracks upstream `main`, so
@@ -145,7 +169,8 @@ failure but isn't one.
   build-time `fc-scan` validation is the guard, and setting the `NOTO_EMOJI_REF`
   repo variable to a tag (e.g. `v2.051`, the build this fix was confirmed
   against) pins it if that ever happens.
-- **The reject glob keeps matching.** It is deliberately path-agnostic
-  (`/usr/share/fonts/*/Noto-COLRv1*.ttf`) so a Fedora directory change doesn't
-  silently disable it, but a *rename* still would. The build-time check is the
-  backstop — watch for the `WARNING` in the build log.
+- **The removal keeps finding its target.** `build.sh` searches
+  `/usr/share/fonts` for `Noto-COLRv1*.ttf`, so a Fedora directory change is
+  handled, but a *rename* would slip past. The build then fails on the
+  `fc-match` assertion rather than shipping broken emoji — if that happens, the
+  fix is to update the filename pattern, not to disable the check.

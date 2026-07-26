@@ -132,22 +132,21 @@ Before moving to `stable-45` (or later):
 - **This workaround is still needed.** The CBDT emoji font exists only because
   Chromium-based apps (Edge, and Electron apps like VS Code) cannot use
   Fedora's COLRv1 `Noto Color Emoji`. When either side fixes that, delete the
-  font install and the fontconfig drop-in and go back to stock. Retest after
+  font install and the COLRv1 removal and go back to stock. Retest after
   major Edge/Electron updates and after each Fedora base bump.
 - **The right emoji font still wins.** The CBDT font and Fedora's COLRv1 font
-  declare the *same* family name, so if the reject glob in
-  `system_files/etc/fonts/conf.d/99-chromium-color-emoji.conf` stops matching
-  (Fedora renames its file), resolution silently reverts to COLRv1 and emoji
-  break again with a perfectly green build. `build.sh` prints a `WARNING` when
-  `fc-match emoji` no longer resolves to the CBDT build — watch for it.
+  declare the *same* family name, so if `build.sh` stops finding
+  `Noto-COLRv1*.ttf` to delete (Fedora renames it), resolution reverts to
+  COLRv1 and emoji break again. This already happened once with a green build,
+  so the check is fatal: `build.sh` **fails** when `fc-match emoji` no longer
+  resolves to the CBDT build. Fix the filename pattern, don't disable it.
 - **The font tracks upstream `main` and is not pinned.** Rebuilds pick up new
   emoji automatically, but also any upstream breakage. The build-time `fc-scan`
   validation fails the build on a corrupt or non-color download; set the
   `NOTO_EMOJI_REF` repo variable to a tag to pin if upstream regresses.
-- **The base image keeps shipping fontconfig and a COLRv1 emoji font.** The
-  drop-in assumes `/usr/share/fonts/*/Noto-COLRv1*.ttf` exists to reject. If a
-  future base drops it, the reject becomes a harmless no-op — the CBDT font is
-  then the only emoji font and everything still works.
+- **The base image dropping its COLRv1 font is fine.** If a future base stops
+  shipping one, the removal step logs a `NOTE` and does nothing — the CBDT font
+  is then the only emoji font and everything still works.
 
 ### Adding a new entry
 

@@ -114,10 +114,10 @@ sed -i 's/^enabled=1/enabled=0/' /etc/yum.repos.d/microsoft-edge.repo
 # not even when a page explicitly asks for font-family:'Noto Color Emoji' — so
 # Edge and Electron apps (VS Code) render every emoji as a tofu box, while
 # Qt/GTK/Firefox render the same font fine. Upstream's CBDT (bitmap) build of
-# the same font works in Chromium, so install that alongside and let
-# system_files/etc/fonts/conf.d/99-chromium-color-emoji.conf reject the COLRv1
+# the same font works in Chromium, so install that and remove Fedora's COLRv1
 # file (both declare the same family name, so the winner would otherwise be
-# decided by fontconfig scan order). See docs/fonts.md.
+# decided by fontconfig scan order — and it picks the broken one).
+# See docs/fonts.md.
 # Deliberately tracks upstream's main branch rather than a pinned tag: this is
 # a font whose releases only add newly-standardized emoji, so rebuilding just
 # keeps emoji coverage current, and the alternative is hand-bumping a version
@@ -145,21 +145,40 @@ echo "Noto Color Emoji (CBDT) from ref '${NOTO_EMOJI_REF}': $(stat -c%s /tmp/Not
 install -D -m 0644 /tmp/NotoColorEmoji.ttf \
     /usr/share/fonts/noto-color-emoji-cbdt/NotoColorEmoji.ttf
 rm -f /tmp/NotoColorEmoji.ttf
-fc-cache -f /usr/share/fonts >/dev/null
 
-# Surface (but don't fail on) a regression in which emoji font actually wins.
-# Both the CBDT and COLRv1 files claim the family "Noto Color Emoji", so if the
-# reject glob ever stops matching (Fedora moves or renames its file), font
-# resolution silently reverts to COLRv1 and emoji break again in Edge/VS Code
-# with a perfectly green build. Same rationale as the PlasmaZones skew check.
+# Remove Fedora's COLRv1 file. Both files declare the identical family name
+# "Noto Color Emoji", so leaving both installed lets fontconfig's scan order
+# pick the winner — and it picks COLRv1, which is the broken one. A fontconfig
+# <selectfont><rejectfont><glob> drop-in was tried first and did NOT work on
+# this base (it works on some other distros' fontconfig, which is what made it
+# look correct); deleting the file is behaviour, not configuration, so it does
+# not depend on fontconfig semantics at all. See docs/fonts.md.
+COLRV1_REMOVED=0
+while IFS= read -r -d '' COLRV1_FONT; do
+    echo "Removing Fedora's COLRv1 emoji font: ${COLRV1_FONT}"
+    rm -f "${COLRV1_FONT}"
+    COLRV1_REMOVED=$((COLRV1_REMOVED + 1))
+done < <(find /usr/share/fonts -name 'Noto-COLRv1*.ttf' -print0)
+if [[ "${COLRV1_REMOVED}" -eq 0 ]]; then
+    echo "NOTE: no Noto-COLRv1*.ttf found to remove — base image no longer ships one."
+fi
+
+# Rebuild the font cache after both the install and the removal, so the cache
+# can't keep advertising a file that is no longer on disk.
+fc-cache -f >/dev/null
+
+# Fail the build if the wrong emoji font wins. Both fonts claim the same family
+# name, so this is a realistic silent-regression path: the first version of this
+# fix produced a perfectly green CI build that still shipped broken emoji, which
+# is exactly why this check exists and why it is fatal rather than a warning.
 EMOJI_FONT_EXPECTED="/usr/share/fonts/noto-color-emoji-cbdt/NotoColorEmoji.ttf"
 EMOJI_FONT_ACTUAL="$(fc-match -f '%{file}' emoji)" || EMOJI_FONT_ACTUAL=""
-if [[ "${EMOJI_FONT_ACTUAL}" == "${EMOJI_FONT_EXPECTED}" ]]; then
-    echo "Emoji font check: 'emoji' resolves to the CBDT build — Chromium-based apps OK."
-else
-    echo "WARNING: 'emoji' resolves to '${EMOJI_FONT_ACTUAL:-nothing}', not ${EMOJI_FONT_EXPECTED}." >&2
-    echo "WARNING: Edge and Electron apps will render emoji as tofu boxes — see docs/fonts.md." >&2
+if [[ "${EMOJI_FONT_ACTUAL}" != "${EMOJI_FONT_EXPECTED}" ]]; then
+    echo "ERROR: 'emoji' resolves to '${EMOJI_FONT_ACTUAL:-nothing}', not ${EMOJI_FONT_EXPECTED}." >&2
+    echo "ERROR: Edge and Electron apps would render emoji as tofu boxes — see docs/fonts.md." >&2
+    exit 1
 fi
+echo "Emoji font check: 'emoji' resolves to the CBDT build — Chromium-based apps OK."
 
 # Use a COPR Example:
 #
