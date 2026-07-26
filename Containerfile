@@ -41,12 +41,18 @@ RUN rm /opt && mkdir /opt
 ARG PWSH_VERSION=7.5.2
 # PlasmaZones version, overridable at build time (--build-arg PLASMAZONES_VERSION=...)
 ARG PLASMAZONES_VERSION=3.1.3
+# Noto Color Emoji (CBDT build) upstream git ref, overridable at build time
+# (--build-arg NOTO_EMOJI_REF=v2.051). Tracks "main" so emoji coverage stays
+# current without manual bumps; pin a tag only to escape a bad upstream build.
+# See docs/fonts.md.
+ARG NOTO_EMOJI_REF=main
 
 RUN --mount=type=bind,from=ctx,source=/,target=/ctx \
     --mount=type=cache,dst=/var/cache \
     --mount=type=cache,dst=/var/log \
     --mount=type=tmpfs,dst=/tmp \
-    PWSH_VERSION="${PWSH_VERSION}" PLASMAZONES_VERSION="${PLASMAZONES_VERSION}" /ctx/build.sh
+    PWSH_VERSION="${PWSH_VERSION}" PLASMAZONES_VERSION="${PLASMAZONES_VERSION}" \
+    NOTO_EMOJI_REF="${NOTO_EMOJI_REF}" /ctx/build.sh
 
 ### LINTING
 ## Verify final image and contents are correct.

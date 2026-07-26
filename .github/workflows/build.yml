@@ -22,6 +22,10 @@ env:
   # PlasmaZones version baked into the image. Same override mechanism as
   # PWSH_VERSION: repo variable PLASMAZONES_VERSION, else build.sh default.
   PLASMAZONES_VERSION: ${{ vars.PLASMAZONES_VERSION }}
+  # Noto Color Emoji (CBDT build) upstream git ref. Tracks "main" by default so
+  # emoji coverage follows rebuilds; set repo variable NOTO_EMOJI_REF to a tag
+  # (e.g. v2.051) only to escape a bad upstream build. See docs/fonts.md.
+  NOTO_EMOJI_REF: ${{ vars.NOTO_EMOJI_REF }}
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref || github.run_id }}-${{ inputs.brand_name}}-${{ inputs.stream_name }}
