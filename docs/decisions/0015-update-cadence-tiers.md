@@ -1,4 +1,4 @@
-# ADR-0013: Tier update cadence by value × breakage risk, not one rule for everything
+# ADR-0015: Tier update cadence by value × breakage risk, not one rule for everything
 
 - **Status:** Accepted
 - **Date:** 2026-08-04
