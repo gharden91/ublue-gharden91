@@ -28,10 +28,11 @@ section tell you whether a record still binds.
 | [0011](0011-rendering-claims-require-a-boot-test.md) | Rendering/desktop-integration claims require a boot test, not a build signal | Accepted | repo |
 | [0012](0012-knowledge-capture-is-a-skill-not-a-hook.md) | Knowledge capture is a skill (`/handoff`), not an enforcing hook | Accepted | repo |
 
-> **These records were backfilled** in one pass from `git log`, the `docs/`
-> pages, and the code. The reasoning is reconstructed from what shipped, not a
-> transcript of the moment — dates are when the decision was actually made
-> (the commit that shipped it), not when the record was written.
+> **Most of these were backfilled** in one pass (0001–0011) from `git log`, the
+> `docs/` pages, and the code when the knowledge system was set up — the
+> reasoning is reconstructed from what shipped, not a transcript of the moment.
+> ADR-0012 was made live during that setup. Either way, the **Date** is when the
+> decision was actually made, not when the record was written.
 
 ## The bar — keep it high or this folder becomes the old notes folder
 
