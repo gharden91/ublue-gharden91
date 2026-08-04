@@ -68,7 +68,7 @@ in the commit body and put `Closes #N` in the **PR** body — the merge closes i
 
 **One idea per issue.** If the session turned up three separable things, file
 three issues, not one with a checklist — a bundled issue takes its whole batch
-down when one premise fails (#17 → #21, the worked example in `CLAUDE.md`). A
+down when one premise fails (#17 → #21 — ADR-0016 has the worked example). A
 genuinely small thing may ride along with the idea it touches. **When the split
 isn't obvious, ask the user rather than deciding for them.**
 

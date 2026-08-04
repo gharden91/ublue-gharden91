@@ -50,6 +50,9 @@ The two failure modes, and why each hurts:
 - **Bundled PR** — the reviewer has to accept or reject unrelated changes
   together, and the verification tier for the riskiest part gates all of it.
 
+Full reasoning and what was turned down:
+[ADR-0016](docs/decisions/0016-one-idea-per-issue-one-issue-per-pr.md).
+
 Depth pages, each edited in place:
 
 - [`docs/local-testing.md`](docs/local-testing.md) — build & test the image locally (podman/just/VM).
