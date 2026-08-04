@@ -1,6 +1,6 @@
 # ADR-0010: No image-level color-emoji fix; per-user workaround only
 
-- **Status:** Accepted
+- **Status:** Superseded by ADR-0013
 - **Date:** 2026-07-26
 - **Scope:** fonts
 - **Shipped in:** *nothing shipped* — the image-level fix (#14) was reverted (#15). This records the decision **not** to carry one.
