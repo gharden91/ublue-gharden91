@@ -11,7 +11,7 @@ customization silently stops doing what it should, because the base image or an
 upstream project moved underneath the pin. Start from that assumption.
 -->
 
-**Affected customization:** <!-- PlasmaZones / PowerShell / Edge / Discord / VLC / fonts -->
+**Affected customization:** <!-- PlasmaZones / PowerShell / Discord / VLC / fonts -->
 **Symptom:** <!-- e.g. "zones don't snap", "Discord won't launch", "emoji are tofu" -->
 
 ### Drift triage

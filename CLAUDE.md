@@ -22,7 +22,7 @@ Depth pages, each edited in place:
 - [`docs/verifying-changes.md`](docs/verifying-changes.md) — what counts as verified: container < VM boot < real hardware.
 - [`docs/plasmazones.md`](docs/plasmazones.md) — PlasmaZones install; the KWin version-match constraint.
 - [`docs/powershell.md`](docs/powershell.md) — PowerShell 7 into `/usr`; how to bump the pin.
-- [`docs/edge.md`](docs/edge.md) — Microsoft Edge native RPM; the `/opt` immutability story.
+- [`docs/edge.md`](docs/edge.md) — why Microsoft Edge is **not** shipped; the `/opt` story.
 - [`docs/discord.md`](docs/discord.md) — Discord official RPM, deliberately unpinned.
 - [`docs/vlc.md`](docs/vlc.md) — VLC from negativo17 fedora-multimedia, not RPM Fusion.
 - [`docs/fonts.md`](docs/fonts.md) — color-emoji tofu in Chromium apps; the per-user workaround.
@@ -56,12 +56,15 @@ These hold across the whole image; the per-feature reasoning is in `docs/` and
 - **`x86_64` is assumed everywhere.** Download URLs in `build.sh` hardcode
   `linux-x64` / `x86_64`. Any ARM64 build must make each install conditional
   on target arch.
-- **`/opt` is a real, immutable directory** (`RUN rm /opt && mkdir /opt`),
-  which native Edge's RPM needs. This overrides the base's `/opt -> /var/opt`
-  symlink; see ADR-0007 and `docs/edge.md` for the containerd caveat.
-- **Third-party repos are never left enabled** on the final image. Edge's repo
-  is force-disabled after install; VLC and negativo17 use per-transaction
-  `--enable-repo`. Keep it that way.
+- **`/opt` is left as the base's `/opt -> /var/opt` symlink.** It was briefly
+  made a real immutable directory for native Edge (`RUN rm /opt && mkdir /opt`),
+  but Edge was dropped and the line removed — no packaged app installs into
+  `/opt` now. Don't re-add it without a new `/opt`-only RPM that's worth it:
+  `bazzite-dx` writes to `/var/opt`, so replacing the symlink isn't free. See
+  ADR-0013 (supersedes ADR-0007) and `docs/edge.md`.
+- **Third-party repos are never left enabled** on the final image. VLC and
+  negativo17 use per-transaction `--enable-repo`. Keep it that way. (Edge's repo
+  used to be force-disabled after install; Edge is no longer installed.)
 - **Pinned versions bump deliberately, not automatically** — `PWSH_VERSION`,
   `PLASMAZONES_VERSION`. Discord is the *one* deliberate exception (ADR-0009).
 - **A green build never verifies a desktop-visible change.** Rendering, fonts,

@@ -7,17 +7,19 @@
 
 ## Symptom
 
-Emoji render as tofu boxes (□) in Chromium-based applications — Microsoft Edge
-and Electron apps such as VS Code — while Qt/GTK applications and Firefox
-render them correctly.
+Emoji render as tofu boxes (□) in Chromium-based applications — Electron apps
+such as VS Code, and any Chromium browser you add (e.g. Edge from distrobox) —
+while Qt/GTK applications and Firefox render them correctly.
 
 Two things make the scope easy to misread when diagnosing this:
 
 - **Discord looks fine.** It ships its own emoji as images and never touches
   the system font, so it proves nothing either way.
 - **VS Code is the useful test.** It is Electron (Chromium) installed natively
-  from this image, so if it breaks too, the problem is Chromium-wide rather
-  than Edge-specific.
+  from the base image, so its breakage shows the problem is Chromium-wide, not
+  specific to any one browser. (Native Edge used to be the other in-image test
+  case; it was removed in #17 — see [edge.md](edge.md) — but VS Code alone is
+  enough to reproduce and verify this.)
 
 ## Workaround
 
@@ -31,8 +33,10 @@ curl -fLo ~/.local/share/fonts/NotoColorEmoji.ttf \
 fc-cache -f
 ```
 
-Then fully quit the affected app and reopen it (check `pgrep msedge` is empty —
-a background Edge process will keep the old font set). Verify with:
+Then fully quit the affected app and reopen it — make sure no background
+process of it is still running (e.g. `pgrep -f code` for VS Code, or
+`pgrep msedge` if you've added Edge), since a lingering process keeps the old
+font set. Verify with:
 
 ```
 data:text/html;charset=utf-8,<div style="font-size:60px">🧠✨😀</div>
@@ -124,18 +128,22 @@ Plausible leads for a future attempt, none of them tested:
 - a stale per-user cache in `~/.cache/fontconfig` masking the image's fonts —
   worth trying `fc-cache -f` alone, before installing anything, on a machine
   freshly rebased onto an image that includes the font;
-- Chromium's sandbox and which font directories it can open on a bootc image
-  where Edge lives in `/opt`.
+- Chromium's sandbox and which font directories it can open on a bootc image.
+  **Note (2026-08-04):** when this lead was written, `/opt` was a real immutable
+  directory (for native Edge). #17 removed Edge and reverted `/opt` to the base's
+  `/opt -> /var/opt` symlink, so if the immutable `/opt` ever affected Chromium's
+  font-directory access, VS Code emoji may behave differently on the #17 build.
+  Untested — check with no user-level font installed. See ADR-0013's asterisk.
 
 ## When to drop this
 
 The workaround exists only because Chromium-based apps can't use Fedora's
 COLRv1 build. When either side fixes that, delete
 `~/.local/share/fonts/NotoColorEmoji.ttf`, run `fc-cache -f`, and check the
-test page again. Worth retesting after major Edge/Electron updates and after
+test page again. Worth retesting after major Chromium/Electron updates and after
 each Fedora base bump.
 
 If you retry an image-level fix, note that the *only* trustworthy verification
 is booting the image with no user-level font installed and looking at emoji in
-Edge and VS Code. A green build proves nothing here — that was already
-demonstrated once.
+VS Code (and any Chromium browser you've added). A green build proves nothing
+here — that was already demonstrated once.

@@ -45,5 +45,17 @@ nothing here — that was demonstrated once already.
   Fedora reverts to CBDT. Then drop the workaround entirely (retest after major
   Edge/Electron updates and each Fedora base bump).
 - Note the interaction with [issue #17](https://github.com/gharden91/ublue-gharden91/issues/17):
-  if Edge is dropped over these font quirks, the Chromium surface shrinks but
-  VS Code/Electron keep the problem.
+  Edge was dropped over these font quirks (ADR-0013). That shrinks the Chromium
+  surface but, on its own, VS Code/Electron keep the problem — the root cause is
+  COLRv1, not Edge.
+  - *\* Asterisk (untested):* ADR-0013 also reverted `/opt` from a real
+    immutable directory back to the base's `/opt -> /var/opt` symlink. Because
+    `docs/fonts.md`'s unexplained crux is that the same font works from `~` but
+    not from `/usr`, and lists "Chromium's sandbox and which font directories it
+    can open on a bootc image where Edge lives in `/opt`" as an untested lead,
+    it is *possible* — not expected — that making `/opt` real had unforeseen
+    downstream effects on Chromium font access, and that reverting it also
+    improves VS Code. This is a hypothesis to check on the #17 build, not a
+    claimed fix. Only a boot test with **no** user-level emoji font installed
+    settles it; if VS Code renders emoji after the revert, reopen this ADR with
+    that evidence.

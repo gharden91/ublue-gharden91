@@ -90,23 +90,12 @@ chmod +x /usr/lib/microsoft/powershell/7/pwsh
 ln -sf /usr/lib/microsoft/powershell/7/pwsh /usr/bin/pwsh
 rm -f /tmp/powershell.tar.gz
 
-### Install Microsoft Edge (stable) from Microsoft's RPM repo
-# Edge is installed as a native RPM rather than a Flatpak so features like
-# native messaging (password managers, SSO/PIV) and system integration work.
-rpm --import https://packages.microsoft.com/keys/microsoft.asc
-cat >/etc/yum.repos.d/microsoft-edge.repo <<'EOF'
-[microsoft-edge]
-name=microsoft-edge
-baseurl=https://packages.microsoft.com/yumrepos/edge
-enabled=1
-gpgcheck=1
-gpgkey=https://packages.microsoft.com/keys/microsoft.asc
-EOF
-dnf5 install -y microsoft-edge-stable
-# The Edge package ships (and re-enables) its own microsoft-edge.repo for its
-# self-update mechanism. Force it disabled so the final image doesn't pull
-# third-party updates; updates come from rebuilding the image instead.
-sed -i 's/^enabled=1/enabled=0/' /etc/yum.repos.d/microsoft-edge.repo
+# Microsoft Edge is deliberately NOT installed. Its native RPM was dropped
+# because it kept the same Chromium color-emoji tofu as the distrobox build
+# (no gain over distrobox) while being the sole reason /opt had to be made a
+# real immutable directory. Removing it lets /opt revert to the base's
+# /opt -> /var/opt symlink. See docs/edge.md, docs/fonts.md, and ADR-0013
+# (which supersedes ADR-0007). Do not re-add without revisiting both.
 
 # Use a COPR Example:
 #

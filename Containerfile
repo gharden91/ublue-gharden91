@@ -28,10 +28,14 @@ FROM ghcr.io/ublue-os/bazzite-dx:stable-44
 ## Uncomment the following line if one desires to make /opt immutable and be able to be used
 ## by the package manager.
 
-# Make /opt a real (immutable) directory instead of a symlink to /var/opt.
-# Required for RPMs that install into /opt (e.g. microsoft-edge-stable), whose
-# cpio unpack fails against the /opt -> /var/opt symlink. See docs/edge.md.
-RUN rm /opt && mkdir /opt
+# NOTE: /opt is deliberately left as the base's /opt -> /var/opt symlink.
+# We briefly made it a real immutable directory (`RUN rm /opt && mkdir /opt`)
+# so Microsoft Edge's RPM could unpack into /opt, but Edge has since been
+# dropped (see docs/edge.md, ADR-0013) and no other packaged app installs
+# into /opt, so the symlink stands. Don't re-add the `rm /opt && mkdir /opt`
+# line unless a new /opt-installing RPM makes it necessary — bazzite-dx itself
+# writes to /var/opt, so replacing the symlink is not free (see ADR-0007).
+# RUN rm /opt && mkdir /opt
 
 ### MODIFICATIONS
 ## make modifications desired in your image and install packages by modifying the build.sh script

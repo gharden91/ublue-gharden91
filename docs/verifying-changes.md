@@ -42,7 +42,8 @@ tier, including the `qemux/qemu` runner regression workaround for Tier 2.
 - **Anything about rendering or fonts in a Chromium/Electron app** → **Tier 3
   only.** A build log, `fc-match`, `fc-list`, and `podman run` are all *known
   liars* for this class — every one of them was green while emoji were broken.
-  Boot a machine with no user-level font installed and look at Edge and VS Code.
+  Boot a machine with no user-level font installed and look at VS Code (and any
+  Chromium browser you've added).
 
 ## Reporting what you verified
 

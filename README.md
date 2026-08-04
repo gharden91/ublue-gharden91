@@ -5,7 +5,7 @@ Most commits are made with Claude Code's assistance. This image's own customizat
 - [Local build & testing](./docs/local-testing.md) — how to build and test the image locally.
 - [PlasmaZones](./docs/plasmazones.md) — install approach, decisions, and maintenance.
 - [PowerShell 7](./docs/powershell.md) — install approach, decisions, and how to bump the version.
-- [Microsoft Edge](./docs/edge.md) — native RPM in `/opt`; the `/opt` blocker and how it was resolved.
+- [Microsoft Edge](./docs/edge.md) — why it's not shipped (removed over font parity + the `/opt` risk).
 - [Discord](./docs/discord.md) — official RPM, deliberately unpinned, and why rebuild cadence matters.
 - [VLC](./docs/vlc.md) — negativo17 fedora-multimedia install, why not RPM Fusion.
 - [Fonts / color emoji](./docs/fonts.md) — known issue: Chromium-based apps render tofu; manual per-user workaround.

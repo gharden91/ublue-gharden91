@@ -3,7 +3,9 @@
 - **Status:** Accepted
 - **Date:** 2026-07-19
 - **Scope:** repo
-- **Shipped in:** #10 (Edge established the pattern; Discord and VLC followed)
+- **Shipped in:** #10 (Edge established the pattern; Discord and VLC followed).
+  Edge was later dropped entirely — see ADR-0013 — but the native-RPM decision
+  stands for Discord and VLC.
 
 ## The question
 
@@ -31,6 +33,7 @@ acceleration (VA-API/VDPAU) the base image already configures.
 Decided per app, not as a blanket reversal:
 
 - An app's native RPM fights the immutable image badly enough that Flatpak is
-  the only clean path (the Edge `/opt` fight, ADR-0007, came close — and issue
-  #17 is actively questioning whether Edge should stay native at all).
+  the only clean path (the Edge `/opt` fight, ADR-0007, came close — and Edge
+  was ultimately removed from the image altogether, ADR-0013, rather than
+  switched to Flatpak).
 - An app only ships a Flatpak, or drops its RPM.

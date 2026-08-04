@@ -21,12 +21,13 @@ section tell you whether a record still binds.
 | [0004](0004-plasmazones-from-copr.md) | Install PlasmaZones from the maintainer's COPR | Superseded by ADR-0005 | plasmazones |
 | [0005](0005-plasmazones-from-pinned-release-rpm.md) | Install PlasmaZones from a pinned GitHub release RPM | Accepted | plasmazones |
 | [0006](0006-native-rpms-not-flatpaks.md) | Ship desktop apps as native RPMs baked in, not Flatpaks | Accepted | repo |
-| [0007](0007-make-opt-a-real-immutable-directory.md) | Make `/opt` a real immutable directory to allow native Edge | Accepted | edge |
+| [0007](0007-make-opt-a-real-immutable-directory.md) | Make `/opt` a real immutable directory to allow native Edge | Superseded by ADR-0013 | edge |
 | [0008](0008-vlc-from-negativo17-not-rpmfusion.md) | Install VLC from negativo17, not RPM Fusion | Accepted | vlc |
 | [0009](0009-discord-unpinned-official-rpm.md) | Install Discord unpinned from the official latest RPM | Accepted | discord |
 | [0010](0010-no-image-level-emoji-fix.md) | No image-level color-emoji fix; per-user workaround only | Accepted | fonts |
 | [0011](0011-rendering-claims-require-a-boot-test.md) | Rendering/desktop-integration claims require a boot test, not a build signal | Accepted | repo |
 | [0012](0012-knowledge-capture-is-a-skill-not-a-hook.md) | Knowledge capture is a skill (`/handoff`), not an enforcing hook | Accepted | repo |
+| [0013](0013-drop-edge-and-revert-immutable-opt.md) | Drop native Edge and revert `/opt` to the base symlink | Accepted | edge |
 
 > **Most of these were backfilled** in one pass (0001–0011) from `git log`, the
 > `docs/` pages, and the code when the knowledge system was set up — the

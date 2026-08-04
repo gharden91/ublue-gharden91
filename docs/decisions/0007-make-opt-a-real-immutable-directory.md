@@ -1,9 +1,9 @@
 # ADR-0007: Make `/opt` a real immutable directory to allow native Edge
 
-- **Status:** Accepted
+- **Status:** Superseded by [ADR-0013](0013-drop-edge-and-revert-immutable-opt.md)
 - **Date:** 2026-07-19
 - **Scope:** edge
-- **Shipped in:** #10
+- **Shipped in:** #10 (reverted in #17)
 
 ## The question
 
@@ -37,6 +37,11 @@ hardware and cleared — it's 0-byte auto-created dirs, nothing references
 | Keep Edge in distrobox (prior state) | Zero image risk, but not present out-of-the-box and same sandbox-ish limitations. |
 
 ## What would change our mind
+
+This happened — see [ADR-0013](0013-drop-edge-and-revert-immutable-opt.md).
+Edge was dropped over the persistent Chromium font issues this ADR flagged as a
+live question, nothing else needed `/opt`, and the `rm /opt && mkdir /opt` line
+was removed with it (#17). The original triggers are kept below for the record:
 
 - A base app turns out to depend on reaching `/var/opt` state through `/opt`
   (the containerd concern) — then the immutable `/opt` breaks it and this

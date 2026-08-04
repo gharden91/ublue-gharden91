@@ -17,7 +17,7 @@ settled call. *Open work* lives only in
 - [verifying-changes.md](./verifying-changes.md) — what counts as verified: the tier ladder (container < VM boot < real hardware) and the boot-test rule.
 - [plasmazones.md](./plasmazones.md) — PlasmaZones install: intent, decisions, and maintenance.
 - [powershell.md](./powershell.md) — PowerShell 7 install: intent, decisions, and maintenance.
-- [edge.md](./edge.md) — Microsoft Edge: native-RPM install, the `/opt` blocker, and how it was resolved.
+- [edge.md](./edge.md) — Microsoft Edge: why it's **not** shipped (removed in #17), and the `/opt` story.
 - [discord.md](./discord.md) — Discord: official RPM, deliberately unpinned, and why rebuild cadence matters.
 - [vlc.md](./vlc.md) — VLC: negativo17 fedora-multimedia install, why not RPM Fusion.
 - [fonts.md](./fonts.md) — color emoji: known issue where Chromium-based apps render tofu, and the manual per-user workaround.
