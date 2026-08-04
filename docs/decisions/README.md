@@ -29,6 +29,7 @@ section tell you whether a record still binds.
 | [0012](0012-knowledge-capture-is-a-skill-not-a-hook.md) | Knowledge capture is a skill (`/handoff`), not an enforcing hook | Accepted | repo |
 | [0013](0013-emoji-bug-was-a-stale-user-font-cache.md) | The color-emoji bug was a stale per-user font cache, not the image | Accepted | fonts |
 | [0014](0014-pin-the-vm-runner-image.md) | Pin the local VM runner image instead of tracking `latest` | Accepted | local testing |
+| [0015](0015-update-cadence-tiers.md) | Tier update cadence by value × breakage risk, not one rule for everything | Accepted | repo |
 | [0016](0016-one-idea-per-issue-one-issue-per-pr.md) | One idea per issue, one issue per PR | Accepted | repo |
 
 > **Most of these were backfilled** in one pass (0001–0011) from `git log`, the
