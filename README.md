@@ -12,7 +12,10 @@ Most commits are made with Claude Code's assistance. This image's own customizat
 
 # Based on
 
-Forked from [ublue-os/image-template](https://github.com/ublue-os/image-template)
+Forked from [ublue-os/image-template](https://github.com/ublue-os/image-template).
+We do **not** rebase or merge from the template — the histories are unrelated
+and our customizations have diverged; worthwhile upstream changes are ported by
+hand. See [ADR-202608042137](./docs/decisions/202608042137-no-automated-template-sync.md).
 
 ## image-template
 
