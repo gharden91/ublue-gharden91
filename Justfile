@@ -116,7 +116,7 @@ build $target_image=image_name $tag=default_tag:
     # (ADR-0003), and --pull=newer resolves it to a digest at build time; nothing
     # else records which digest that was. Read the FROM line rather than
     # duplicating the ref here, so the Containerfile stays the single source of
-    # truth. See ADR-0013 for why the base is deliberately left unpinned.
+    # truth. See ADR-0015 for why the base is deliberately left unpinned.
     BASE_IMAGE=$(awk '$1 == "FROM" { image = $2 } END { print image }' Containerfile)
     # Pull now so the digest we inspect is the one the build will use (the build
     # itself only re-pulls if newer, which this just made current).
