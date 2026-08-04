@@ -109,6 +109,23 @@ build $target_image=image_name $tag=default_tag:
     if [[ -n "${PLASMAZONES_VERSION:-}" ]]; then
         BUILD_ARGS+=("--build-arg" "PLASMAZONES_VERSION=${PLASMAZONES_VERSION}")
     fi
+
+    # Resolve the base image this build sits on, so an output tag
+    # (e.g. latest-20260802-df42ed9) can be reconciled back to the exact base it
+    # came from. The Containerfile's FROM tag floats within its Fedora release
+    # (ADR-0003), and --pull=newer resolves it to a digest at build time; nothing
+    # else records which digest that was. Read the FROM line rather than
+    # duplicating the ref here, so the Containerfile stays the single source of
+    # truth. See ADR-0015 for why the base is deliberately left unpinned.
+    BASE_IMAGE=$(awk '$1 == "FROM" { image = $2 } END { print image }' Containerfile)
+    # Pull now so the digest we inspect is the one the build will use (the build
+    # itself only re-pulls if newer, which this just made current).
+    podman pull --quiet "${BASE_IMAGE}"
+    BASE_DIGEST=$(podman image inspect "${BASE_IMAGE}" --format "{{ '{{.Digest}}' }}")
+    BASE_VERSION=$(podman image inspect "${BASE_IMAGE}" --format '{{ '{{index .Config.Labels "org.opencontainers.image.version"}}' }}')
+    BASE_VERSION=${BASE_VERSION:-unknown}
+    echo "Base image: ${BASE_IMAGE}@${BASE_DIGEST} (upstream version ${BASE_VERSION})"
+
     LABELS=()
     if [[ -z "$(git status -s)" ]]; then
         GIT_SHA=$(git rev-parse --short HEAD)
@@ -130,6 +147,15 @@ build $target_image=image_name $tag=default_tag:
     LABELS+=("--label" "org.opencontainers.image.description={{ image_desc }}")
     LABELS+=("--label" "org.opencontainers.image.title={{ image_name }}")
     LABELS+=("--label" "org.opencontainers.image.vendor={{ repo_organization }}")
+
+    # Base-image provenance — the reconciliation link this repo was missing.
+    # base.name/base.digest are the OCI-standard keys for "what did this come
+    # from"; the version label carries Bazzite's own human-readable string.
+    # `skopeo inspect docker://.../<output-tag>` now shows the base it was built
+    # on, so reconciliation is a label lookup, not a guess from dates.
+    LABELS+=("--label" "org.opencontainers.image.base.name=${BASE_IMAGE}")
+    LABELS+=("--label" "org.opencontainers.image.base.digest=${BASE_DIGEST}")
+    LABELS+=("--label" "org.ublue-gharden91.base-image.version=${BASE_VERSION}")
 
     # This actually builds the image!
     PODMAN_BUILD_ARGS=("${BUILD_ARGS[@]}" "${LABELS[@]}" --pull=newer --tag "${target_image}:${tag}" --file Containerfile)
