@@ -160,6 +160,13 @@ Before moving to `stable-45` (or later):
   silently no-ops and the image ships with a third-party repo **enabled** — the
   build still succeeds. Verify with
   `podman run --rm <image> grep enabled= /etc/yum.repos.d/microsoft-edge.repo`.
+- **`repo_add_once` must stay `"false"`.** Edge ships
+  `/etc/cron.daily/microsoft-edge`, which recreates the repo config *on running
+  machines*. It is inert today only because no cron implementation exists in the
+  base — **if `cronie` ever appears in `bazzite-dx`, that changes silently**.
+  `build.sh` writes `repo_add_once="false"` to `/etc/default/microsoft-edge` to
+  disarm it; check that file still exists and that Edge hasn't changed the
+  mechanism after a version bump.
 - **Edge depends on `/opt` being a real directory.** `Containerfile` carries
   `RUN rm /opt && mkdir /opt` (ADR-0007). Reverting `/opt` to the base symlink
   breaks the Edge install outright.

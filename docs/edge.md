@@ -20,12 +20,36 @@ integration — work normally. This follows the general rule in
 - writes `/etc/yum.repos.d/microsoft-edge.repo` pointing at
   `https://packages.microsoft.com/yumrepos/edge`;
 - installs `microsoft-edge-stable`;
-- force-disables the repo afterwards with `sed -i 's/^enabled=1/enabled=0/'`.
+- force-disables the repo afterwards with `sed -i 's/^enabled=1/enabled=0/'`;
+- writes `repo_add_once="false"` into `/etc/default/microsoft-edge`.
 
 The `sed` is deliberate and load-bearing: the Edge package **ships and re-enables
 its own `.repo` file** for self-updating, so `dnf5 config-manager setopt` is not
-enough. Leaving it enabled would violate the repo-wide invariant that no
-third-party repo stays enabled on the final image.
+enough. (It also rewrites the `baseurl` to `yumrepos/edge-stable`, replacing what
+`build.sh` wrote.) Leaving it enabled would violate the repo-wide invariant that
+no third-party repo stays enabled on the final image.
+
+### The `repo_add_once` line — disarming a runtime re-add
+
+The `sed` fixes the *image* only. Edge additionally installs
+`/etc/cron.daily/microsoft-edge`, a script whose entire job is to **recreate the
+repo configuration on a running machine**, precisely because the repo cannot be
+added during install. Its own comment says so:
+
+> It creates the repository configuration file for package updates, since we
+> cannot do this during the microsoft-edge installation since the repository is
+> locked.
+
+The package ships `/etc/default/microsoft-edge` containing `repo_add_once="true"`,
+which arms it. That script has never actually run on this image — **no cron or
+anacron implementation is installed in the base** — so the invariant has been
+holding by accident rather than by our `sed`. If `cronie` ever lands in
+`bazzite-dx` (or you layer it), a third-party repo would quietly reappear
+enabled on every booted machine, with a perfectly green build.
+
+Setting `repo_add_once="false"` is the mechanism the script itself documents for
+turning this off, so the repo stays disabled regardless. It cannot affect Edge
+itself, which runs from `/opt` either way.
 
 `Containerfile` carries `RUN rm /opt && mkdir /opt`.
 
