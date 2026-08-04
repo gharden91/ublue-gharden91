@@ -14,7 +14,44 @@ the base is in **`build_files/build.sh`**; how it's wired is in `Containerfile`,
 | **Durable** — how it works, why, what not to break | **This file** (invariants) + [`docs/`](docs/) (depth) | Edited in place. Never dated. |
 | **Decisions** — why this and not that | [`docs/decisions/`](docs/decisions/) | Immutable. Superseded, never edited. |
 | **Open intent** — what's next, what was deferred | **[GitHub Issues](https://github.com/gharden91/ublue-gharden91/issues)** | The only place open work lives |
+| **In flight** — what's proposed but not merged | **[Pull Requests](https://github.com/gharden91/ublue-gharden91/pulls)** | Where review happens. One PR per issue; update it, don't reopen. |
 | **History** — what shipped, blow by blow | `git log` | Frozen. Never the source of truth. |
+
+An issue says *we should*; a PR says *here it is, look at it*. Work moves
+issue → branch → PR → merge, and the PR body is where the reviewable "why"
+lives — the same why that later hardens into a `docs/decisions/` record if a
+real choice was made. Before starting anything, list **both** open issues and
+open PRs: the change you're about to write may already be sitting in review.
+
+### One idea per issue, one issue per PR
+
+An issue is **one idea**, not a batch of them — and a PR is that one idea's
+implementation. When a request contains several separable ideas, **split them
+into separate issues** unless told otherwise. Something genuinely small can
+ride along with the idea it touches; a second real idea cannot.
+
+**When the split isn't obvious, ask.** Don't silently carve up someone's
+request, and don't silently bundle. It's the author's call how their work is
+divvied up.
+
+The cost of getting this wrong is on the record. Issue #17 bundled four
+things: a premise (*Edge isn't worth keeping*), a docs update, an audit of
+what else needed `/opt`, and a removal. PR #21 implemented the whole bundle
+and was thrown away entire when PR #26 established the premise was false —
+the emoji bug was a stale user font cache, not the image. Had the premise been
+its own issue, it would have been killed for the price of an investigation
+instead of a full removal. PR #26 then made the opposite mistake, carrying the
+font finding *and* unrelated VM-testing and `just clean` fixes in one diff.
+
+The two failure modes, and why each hurts:
+
+- **Bundled issue** — a false premise takes the whole batch down with it, and
+  partial progress can't be merged or closed cleanly.
+- **Bundled PR** — the reviewer has to accept or reject unrelated changes
+  together, and the verification tier for the riskiest part gates all of it.
+
+Full reasoning and what was turned down:
+[ADR-0016](docs/decisions/0016-one-idea-per-issue-one-issue-per-pr.md).
 
 Depth pages, each edited in place:
 
@@ -90,8 +127,9 @@ part of shipping. **Run `/handoff`** and it walks this list.
    something?** Write a record in [`docs/decisions/`](docs/decisions/). The
    "decided not to" case matters most: it's the only work that leaves no trace
    anywhere else.
-3. **Did you close something from the backlog?** Close the issue and reference
-   it in the commit body.
+3. **Did you close something from the backlog?** Put `Closes #N` in the **PR
+   body** — that's what closes the issue on merge; a `Closes` line in a commit
+   on a side branch does not. Reference the issue in the commit body too.
 4. **Did you discover work you're not doing now?** File an issue. Not a comment,
    not a doc, not the conversation — those are all places it dies.
 5. **Did you learn something that cost you an hour?** A base-image quirk, a
@@ -102,6 +140,12 @@ part of shipping. **Run `/handoff`** and it walks this list.
    `just build` + `podman run` (packages/CLI), VM boot (desktop/integration),
    real hardware (fonts/rendering) — pick the minimum tier for the change and
    state which you reached. See [`docs/verifying-changes.md`](docs/verifying-changes.md).
+7. **Open or update the PR.** Never push to `main` — every change lands through
+   a PR. If the branch already has one, push to it and edit the body rather
+   than opening a second. The body says **why**, links the issue (`Closes #N`)
+   and any decision record, and states **the tier you actually verified at** in
+   the reviewer's words, not "should work". Fix your own review comments on the
+   same branch; leave merging to the human.
 
 Distill, don't dump. A session's blow-by-blow belongs in the diff and the commit
 message, nowhere else.
