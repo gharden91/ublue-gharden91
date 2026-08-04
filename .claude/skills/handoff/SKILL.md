@@ -44,13 +44,17 @@ that's where the value is, and the part that dies at session end:
 
 ## 3. Write decision records
 
-Copy `docs/decisions/TEMPLATE.md`, number it next in sequence, one screen max.
-Get **What we turned down** and **What would change our mind** right — they
-carry the weight. Add a row to the index table in `docs/decisions/README.md`.
+Copy `docs/decisions/TEMPLATE.md`, one screen max. Its ID is the UTC minute you
+create it — `ADR-YYYYMMDDHHMM`, from `date -u +%Y%m%d%H%M` — so two open
+branches can't claim the same one (see ADR-202608042129; the older 0001–0016 use
+sequential numbers). Get **What we turned down** and **What would change our
+mind** right — they carry the weight. Add a row to the index table in
+`docs/decisions/README.md`.
 
 If this session reversed or replaced an earlier decision: write a **new** record
-and set the old one's status line to `Superseded by ADR-NNNN` (see 0004 → 0005
-for the worked example). **Never edit or delete an existing record's
+and point the old one's status line at it — `Superseded by ADR-<new id>` (see
+0004 → 0005 for the worked example). That status line is the *only* part of an
+existing record you may touch. **Never edit or delete an existing record's
 substance.**
 
 ## 4. Update docs in place

@@ -31,12 +31,25 @@ section tell you whether a record still binds.
 | [0014](0014-pin-the-vm-runner-image.md) | Pin the local VM runner image instead of tracking `latest` | Accepted | local testing |
 | [0015](0015-update-cadence-tiers.md) | Tier update cadence by value × breakage risk, not one rule for everything | Accepted | repo |
 | [0016](0016-one-idea-per-issue-one-issue-per-pr.md) | One idea per issue, one issue per PR | Accepted | repo |
+| [202608042129](202608042129-timestamp-ids-for-decision-records.md) | Timestamp-based IDs for decision records | Accepted | repo |
 
 > **Most of these were backfilled** in one pass (0001–0011) from `git log`, the
 > `docs/` pages, and the code when the knowledge system was set up — the
 > reasoning is reconstructed from what shipped, not a transcript of the moment.
 > ADR-0012 was made live during that setup. Either way, the **Date** is when the
 > decision was actually made, not when the record was written.
+
+## How records are numbered
+
+Records 0001–0016 use a sequential number. From `ADR-202608042129` onward, a
+record's ID is its **UTC creation-minute timestamp** — `ADR-YYYYMMDDHHMM`,
+`date -u +%Y%m%d%H%M` — so two concurrent branches can't claim the same ID
+(they did, twice: #28, #29). The switch is forward-only: the sequential records
+keep their IDs, since supersession only ever edits an old record's Status line,
+never its substance. Timestamps sort chronologically *after* the zero-padded
+numbers, so the index and the `SessionStart` listing stay in order.
+[ADR-202608042129](202608042129-timestamp-ids-for-decision-records.md) has the
+full reasoning.
 
 ## The bar — keep it high or this folder becomes the old notes folder
 
@@ -57,7 +70,7 @@ wearing a new hat.
 
 ## Status and supersession
 
-`Accepted` · `Superseded by ADR-NNNN` · `Reversed`
+`Accepted` · `Superseded by ADR-<id>` · `Reversed`
 
 **Never delete or rewrite a record's substance.** If a decision changes, write a
 new record and update the old one's status line to point at it (see 0004 → 0005
