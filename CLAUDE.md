@@ -20,6 +20,7 @@ Depth pages, each edited in place:
 
 - [`docs/local-testing.md`](docs/local-testing.md) — build & test the image locally (podman/just/VM).
 - [`docs/verifying-changes.md`](docs/verifying-changes.md) — what counts as verified: container < VM boot < real hardware.
+- [`docs/provenance.md`](docs/provenance.md) — which Bazzite an image was built on; reading the base-image labels.
 - [`docs/plasmazones.md`](docs/plasmazones.md) — PlasmaZones install; the KWin version-match constraint.
 - [`docs/powershell.md`](docs/powershell.md) — PowerShell 7 into `/usr`; how to bump the pin.
 - [`docs/edge.md`](docs/edge.md) — Microsoft Edge native RPM; the `/opt` immutability story.
@@ -52,7 +53,11 @@ These hold across the whole image; the per-feature reasoning is in `docs/` and
   `bazzite-dx:stable-44`, not the floating `stable`, so the image's Fedora
   release can't jump underneath the version-suffixed RPMs we download
   (`.fc44`). Don't switch to `stable` — see ADR-0003 and the Watchlist before
-  bumping to `stable-45`.
+  bumping to `stable-45`. Because that tag still floats *within* Fedora 44,
+  every build stamps the resolved base (name/digest/version) onto the image as
+  labels — that's what makes an unpinned base reconcilable after the fact
+  (ADR-0015, [`docs/provenance.md`](docs/provenance.md)). Don't drop those
+  labels from `just build`.
 - **`x86_64` is assumed everywhere.** Download URLs in `build.sh` hardcode
   `linux-x64` / `x86_64`. Any ARM64 build must make each install conditional
   on target arch.

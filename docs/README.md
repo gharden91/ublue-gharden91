@@ -15,6 +15,7 @@ settled call. *Open work* lives only in
 - [decisions/](./decisions/) — immutable decision records (ADRs): why this and not that.
 - [local-testing.md](./local-testing.md) — how to build and test the image locally.
 - [verifying-changes.md](./verifying-changes.md) — what counts as verified: the tier ladder (container < VM boot < real hardware) and the boot-test rule.
+- [provenance.md](./provenance.md) — which Bazzite an image was built on: the base-image labels and how to read them (registry, running system, local build).
 - [plasmazones.md](./plasmazones.md) — PlasmaZones install: intent, decisions, and maintenance.
 - [powershell.md](./powershell.md) — PowerShell 7 install: intent, decisions, and maintenance.
 - [edge.md](./edge.md) — Microsoft Edge: native-RPM install and why `/opt` is a real directory.
@@ -138,6 +139,22 @@ Before moving to `stable-45` (or later):
 - **RPM Fusion stays out.** Bazzite has no RPM Fusion; its multimedia stack is
   negativo17's, and the two are documented as incompatible. Don't add RPM
   Fusion for codec-adjacent packages in future customizations.
+
+### Base-image provenance (see [provenance.md](./provenance.md))
+
+- **The base labels can go missing without failing the build.** `just build`
+  stamps `org.opencontainers.image.base.name`/`.base.digest` and
+  `org.ublue-gharden91.base-image.version`; nothing asserts they survived.
+  They currently come through `just ostree-rechunk` intact (verified on a
+  published image), but a future rechunker — or a switch to the `chunkah`
+  recipe, which rewrites labels explicitly — could drop them and the build
+  would still go green. Reconciliation would quietly stop working. Spot-check
+  with `skopeo inspect docker://ghcr.io/gharden91/ublue-gharden91:latest`.
+- **`unknown` in the version label means upstream stopped setting theirs.**
+  The version string is read from the base's own
+  `org.opencontainers.image.version`; if Bazzite drops it, ours records
+  `unknown` rather than failing. The digest is still exact, so nothing is
+  really lost — but it's a signal to go read the base's labels directly.
 
 ### Local VM testing (see [local-testing.md](./local-testing.md))
 
