@@ -66,6 +66,16 @@ Anything discovered and not done becomes an issue. Never a code comment, a doc,
 or the conversation. If the session closed something already filed, reference it
 in the commit body and put `Closes #N` in the **PR** body — the merge closes it.
 
+**One idea per issue.** If the session turned up three separable things, file
+three issues, not one with a checklist — a bundled issue takes its whole batch
+down when one premise fails (#17 → #21, the worked example in `CLAUDE.md`). A
+genuinely small thing may ride along with the idea it touches. **When the split
+isn't obvious, ask the user rather than deciding for them.**
+
+Same rule going the other way: if *this session's diff* turned out to carry two
+unrelated ideas, say so in the handoff and offer to split the PR. Don't quietly
+ship the bundle.
+
 ## 6. Commit
 
 One commit, with a body explaining **why**, not just what. Reference issues

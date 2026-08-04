@@ -23,6 +23,33 @@ lives — the same why that later hardens into a `docs/decisions/` record if a
 real choice was made. Before starting anything, list **both** open issues and
 open PRs: the change you're about to write may already be sitting in review.
 
+### One idea per issue, one issue per PR
+
+An issue is **one idea**, not a batch of them — and a PR is that one idea's
+implementation. When a request contains several separable ideas, **split them
+into separate issues** unless told otherwise. Something genuinely small can
+ride along with the idea it touches; a second real idea cannot.
+
+**When the split isn't obvious, ask.** Don't silently carve up someone's
+request, and don't silently bundle. It's the author's call how their work is
+divvied up.
+
+The cost of getting this wrong is on the record. Issue #17 bundled four
+things: a premise (*Edge isn't worth keeping*), a docs update, an audit of
+what else needed `/opt`, and a removal. PR #21 implemented the whole bundle
+and was thrown away entire when PR #26 established the premise was false —
+the emoji bug was a stale user font cache, not the image. Had the premise been
+its own issue, it would have been killed for the price of an investigation
+instead of a full removal. PR #26 then made the opposite mistake, carrying the
+font finding *and* unrelated VM-testing and `just clean` fixes in one diff.
+
+The two failure modes, and why each hurts:
+
+- **Bundled issue** — a false premise takes the whole batch down with it, and
+  partial progress can't be merged or closed cleanly.
+- **Bundled PR** — the reviewer has to accept or reject unrelated changes
+  together, and the verification tier for the riskiest part gates all of it.
+
 Depth pages, each edited in place:
 
 - [`docs/local-testing.md`](docs/local-testing.md) — build & test the image locally (podman/just/VM).
