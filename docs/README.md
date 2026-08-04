@@ -17,10 +17,10 @@ settled call. *Open work* lives only in
 - [verifying-changes.md](./verifying-changes.md) — what counts as verified: the tier ladder (container < VM boot < real hardware) and the boot-test rule.
 - [plasmazones.md](./plasmazones.md) — PlasmaZones install: intent, decisions, and maintenance.
 - [powershell.md](./powershell.md) — PowerShell 7 install: intent, decisions, and maintenance.
-- [edge.md](./edge.md) — Microsoft Edge: native-RPM install, the `/opt` blocker, and how it was resolved.
+- [edge.md](./edge.md) — Microsoft Edge: native-RPM install and why `/opt` is a real directory.
 - [discord.md](./discord.md) — Discord: official RPM, deliberately unpinned, and why rebuild cadence matters.
 - [vlc.md](./vlc.md) — VLC: negativo17 fedora-multimedia install, why not RPM Fusion.
-- [fonts.md](./fonts.md) — color emoji: known issue where Chromium-based apps render tofu, and the manual per-user workaround.
+- [fonts.md](./fonts.md) — color emoji: resolved; the tofu was a stale per-user `fontconfig` cache, not the image.
 
 ## Maintenance Watchlist
 
@@ -138,6 +138,49 @@ Before moving to `stable-45` (or later):
 - **RPM Fusion stays out.** Bazzite has no RPM Fusion; its multimedia stack is
   negativo17's, and the two are documented as incompatible. Don't add RPM
   Fusion for codec-adjacent packages in future customizations.
+
+### Local VM testing (see [local-testing.md](./local-testing.md))
+
+- **The pinned VM runner tag never auto-updates.** `just run-vm` pins
+  `docker.io/qemux/qemu:7.36` because 7.37+ rejects our compressed qcow2s and
+  **silently boots Alpine instead of the image** (ADR-0014). The danger is that
+  the VM comes up looking healthy, so a boot "test" can pass against the wrong
+  OS entirely — check the GRUB entry says `Bazzite`. Recheck newer releases
+  periodically and bump the pin once upstream fixes the probe.
+- **The pin ages against the host.** An old runner can eventually break against
+  a newer host kernel/KVM/podman. If it does, boot the qcow2 with host
+  `qemu-system-x86_64` (documented in `local-testing.md`) while sorting out a
+  newer runner.
+
+### Microsoft Edge (see [edge.md](./edge.md))
+
+- **The repo-disabling `sed` must keep matching.** Edge's RPM ships and
+  re-enables its own `.repo` file; `build.sh` rewrites `enabled=1` to
+  `enabled=0` afterwards. If Microsoft changes that file's shape, the `sed`
+  silently no-ops and the image ships with a third-party repo **enabled** — the
+  build still succeeds. Verify with
+  `podman run --rm <image> grep enabled= /etc/yum.repos.d/microsoft-edge.repo`.
+- **`repo_add_once` must stay `"false"`.** Edge ships
+  `/etc/cron.daily/microsoft-edge`, which recreates the repo config *on running
+  machines*. It is inert today only because no cron implementation exists in the
+  base — **if `cronie` ever appears in `bazzite-dx`, that changes silently**.
+  `build.sh` writes `repo_add_once="false"` to `/etc/default/microsoft-edge` to
+  disarm it; check that file still exists and that Edge hasn't changed the
+  mechanism after a version bump.
+- **Edge depends on `/opt` being a real directory.** `Containerfile` carries
+  `RUN rm /opt && mkdir /opt` (ADR-0007). Reverting `/opt` to the base symlink
+  breaks the Edge install outright.
+- **Unpinned by design.** Rebuilds install whatever `microsoft-edge-stable` is
+  current, so a stalled rebuild cadence means an ageing browser.
+- **x86_64 only.** The repo publishes no ARM64 build.
+
+### Fonts (see [fonts.md](./fonts.md))
+
+- **A long-lived `$HOME` can mask the image's fonts.** Emoji tofu in Chromium
+  apps was traced to a stale `~/.cache/fontconfig`, not the image (ADR-0013).
+  If rendering looks wrong after a base-image font change, test a **fresh user
+  account** before suspecting the image; `fc-match` output is not evidence about
+  what an app sees.
 
 ### Adding a new entry
 
