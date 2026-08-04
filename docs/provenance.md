@@ -42,15 +42,16 @@ $ skopeo inspect docker://ghcr.io/gharden91/ublue-gharden91:latest \
         digest:."org.opencontainers.image.base.digest"
       }'
 {
-  "mine":   "latest.20260804-c0de3dc",
+  "mine":   "latest.20260804-c1a542e",
   "base":   "ghcr.io/ublue-os/bazzite-dx:stable-44",
   "ver":    "44.20260803",
   "digest": "sha256:dd0e324d33b651a3e4b23af1739fd54abed597cd4d4a7727fa67f797caf893ed"
 }
 ```
 
-Read that as: *`ublue-gharden91` `latest.20260804-c0de3dc` is built on
-`bazzite-dx` `stable-44.20260803`.* That's the sentence #18 asked for.
+Read that as: *`ublue-gharden91` `latest.20260804-c1a542e` is built on
+`bazzite-dx` `stable-44.20260803`.* That's the sentence #18 asked for. (That
+output is real, copied from the first image built with these labels.)
 
 Two things worth noticing in that example, because both are normal:
 
@@ -121,11 +122,11 @@ podman image inspect ublue-gharden91:latest \
 ## Caveats
 
 - **Images built before this landed have no base labels.** Anything older than
-  `latest.20260804-c0de3dc` predates the stamping; for those, the date-guessing
+  `latest.20260804-c1a542e` predates the stamping; for those, the date-guessing
   problem from #18 still applies. Nothing can retroactively add them.
 - **The labels survive rechunking.** `just ostree-rechunk` rewrites the image
-  config, but build-time labels come through intact — confirmed against
-  published images, which are all post-rechunk.
+  config, but build-time labels come through intact — confirmed on the
+  published `latest.20260804-c1a542e`, which is post-rechunk and post-push.
 - **The version string is whatever upstream set.** If a base build ever ships
   without `org.opencontainers.image.version`, ours records `unknown` rather
   than failing the build. The digest is still exact, so reconciliation is never
