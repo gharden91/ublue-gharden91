@@ -59,6 +59,9 @@ These hold across the whole image; the per-feature reasoning is in `docs/` and
 - **`/opt` is a real, immutable directory** (`RUN rm /opt && mkdir /opt`),
   which native Edge's RPM needs. This overrides the base's `/opt -> /var/opt`
   symlink; see ADR-0007 and `docs/edge.md` for the containerd caveat.
+  **Edge is the only package that installs there** (verified: nothing else in
+  the image owns a file under `/opt`), so dropping Edge means dropping this
+  line too — and keeping Edge means keeping it.
 - **Third-party repos are never left enabled** on the final image. Edge's repo
   is force-disabled after install; VLC and negativo17 use per-transaction
   `--enable-repo`. Keep it that way.

@@ -71,6 +71,17 @@ cpio unpack fails against that symlink:
 `RUN rm /opt && mkdir /opt` makes `/opt` a real, immutable directory,
 re-provisioned every deploy, so Edge stays updatable across rebuilds.
 
+**Edge is the only reason `/opt` is real.** Verified against the built image:
+`microsoft-edge-stable` is the sole package owning any file under `/opt` (377
+of them), and `/opt` contains nothing but `microsoft/`. So the two travel
+together — if Edge is ever dropped, the `rm /opt && mkdir /opt` line goes with
+it, and nothing else needs auditing first. To re-check after adding a package:
+
+```bash
+podman run --rm <image> bash -c \
+  'for p in $(rpm -qa --qf "%{NAME}\n"); do rpm -ql "$p" | grep -q "^/opt/" && echo "$p"; done | sort -u'
+```
+
 ### The containerd concern — checked, not a problem
 
 `bazzite-dx` itself uses `/var/opt`, so replacing the symlink could in principle
