@@ -3,7 +3,7 @@
 - **Status:** Accepted
 - **Date:** 2026-08-04
 - **Scope:** repo
-- **Shipped in:** the PR closing #30 — demonstrated by this record's own ID
+- **Shipped in:** #34 — demonstrated by this record's own ID
 
 ## The question
 
