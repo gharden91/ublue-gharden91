@@ -19,6 +19,7 @@ the base is in **`build_files/build.sh`**; how it's wired is in `Containerfile`,
 Depth pages, each edited in place:
 
 - [`docs/local-testing.md`](docs/local-testing.md) — build & test the image locally (podman/just/VM).
+- [`docs/verifying-changes.md`](docs/verifying-changes.md) — what counts as verified: container < VM boot < real hardware.
 - [`docs/plasmazones.md`](docs/plasmazones.md) — PlasmaZones install; the KWin version-match constraint.
 - [`docs/powershell.md`](docs/powershell.md) — PowerShell 7 into `/usr`; how to bump the pin.
 - [`docs/edge.md`](docs/edge.md) — Microsoft Edge native RPM; the `/opt` immutability story.
@@ -63,6 +64,11 @@ These hold across the whole image; the per-feature reasoning is in `docs/` and
   `--enable-repo`. Keep it that way.
 - **Pinned versions bump deliberately, not automatically** — `PWSH_VERSION`,
   `PLASMAZONES_VERSION`. Discord is the *one* deliberate exception (ADR-0009).
+- **A green build never verifies a desktop-visible change.** Rendering, fonts,
+  KWin effects, and GUI integration are verified by a *boot*, not by a build log
+  or `podman run` — ADR-0011 and [`docs/verifying-changes.md`](docs/verifying-changes.md)
+  (the tier ladder). This rule was written because the opposite was tried once
+  and shipped a bug.
 
 ## Finishing a piece of work
 
@@ -84,9 +90,10 @@ part of shipping. **Run `/handoff`** and it walks this list.
    packaging gotcha, a wrong assumption (the fonts saga is the canonical
    example). Highest-value thing you can write down. Put it in the relevant
    `docs/` page.
-6. **Run the checks:** `just check` (Justfile syntax) and, for anything touching
-   the build, `just build` (see [`docs/local-testing.md`](docs/local-testing.md)).
-   The hook only fires once merged to the default branch.
+6. **Verify at the right tier and report it honestly.** `just check` (syntax),
+   `just build` + `podman run` (packages/CLI), VM boot (desktop/integration),
+   real hardware (fonts/rendering) — pick the minimum tier for the change and
+   state which you reached. See [`docs/verifying-changes.md`](docs/verifying-changes.md).
 
 Distill, don't dump. A session's blow-by-blow belongs in the diff and the commit
 message, nowhere else.

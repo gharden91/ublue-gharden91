@@ -25,6 +25,8 @@ section tell you whether a record still binds.
 | [0008](0008-vlc-from-negativo17-not-rpmfusion.md) | Install VLC from negativo17, not RPM Fusion | Accepted | vlc |
 | [0009](0009-discord-unpinned-official-rpm.md) | Install Discord unpinned from the official latest RPM | Accepted | discord |
 | [0010](0010-no-image-level-emoji-fix.md) | No image-level color-emoji fix; per-user workaround only | Accepted | fonts |
+| [0011](0011-rendering-claims-require-a-boot-test.md) | Rendering/desktop-integration claims require a boot test, not a build signal | Accepted | repo |
+| [0012](0012-knowledge-capture-is-a-skill-not-a-hook.md) | Knowledge capture is a skill (`/handoff`), not an enforcing hook | Accepted | repo |
 
 > **These records were backfilled** in one pass from `git log`, the `docs/`
 > pages, and the code. The reasoning is reconstructed from what shipped, not a

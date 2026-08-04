@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Universal Blue Forums
+    url: https://universal-blue.discourse.group/
+    about: Questions about the ublue base images or bootc, rather than this image's customizations.

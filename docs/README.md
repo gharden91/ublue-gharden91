@@ -14,6 +14,7 @@ settled call. *Open work* lives only in
 
 - [decisions/](./decisions/) — immutable decision records (ADRs): why this and not that.
 - [local-testing.md](./local-testing.md) — how to build and test the image locally.
+- [verifying-changes.md](./verifying-changes.md) — what counts as verified: the tier ladder (container < VM boot < real hardware) and the boot-test rule.
 - [plasmazones.md](./plasmazones.md) — PlasmaZones install: intent, decisions, and maintenance.
 - [powershell.md](./powershell.md) — PowerShell 7 install: intent, decisions, and maintenance.
 - [edge.md](./edge.md) — Microsoft Edge: native-RPM install, the `/opt` blocker, and how it was resolved.
