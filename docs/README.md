@@ -2,7 +2,19 @@
 
 Notes on this image's customizations, decisions, and workflows.
 
+**How knowledge is organised here** (full map in [`../CLAUDE.md`](../CLAUDE.md)):
+these pages are *durable reference* — how each customization works, its
+constraints, and the war stories. They are **edited in place, never dated**; a
+page describing old behavior is worse than no page, so delete what stopped being
+true. *Why* a choice was made (and what was turned down) lives as an immutable
+record in [`decisions/`](./decisions/) — read those before re-opening a
+settled call. *Open work* lives only in
+[GitHub Issues](https://github.com/gharden91/ublue-gharden91/issues), never as a
+"next steps" section in a doc.
+
+- [decisions/](./decisions/) — immutable decision records (ADRs): why this and not that.
 - [local-testing.md](./local-testing.md) — how to build and test the image locally.
+- [verifying-changes.md](./verifying-changes.md) — what counts as verified: the tier ladder (container < VM boot < real hardware) and the boot-test rule.
 - [plasmazones.md](./plasmazones.md) — PlasmaZones install: intent, decisions, and maintenance.
 - [powershell.md](./powershell.md) — PowerShell 7 install: intent, decisions, and maintenance.
 - [edge.md](./edge.md) — Microsoft Edge: native-RPM install, the `/opt` blocker, and how it was resolved.
