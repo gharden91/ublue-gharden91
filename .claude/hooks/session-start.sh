@@ -37,7 +37,7 @@ if [ -d docs/decisions ]; then
       Accepted) mark="" ;;
       *)        mark=" [$status]" ;;
     esac
-    printf '  %-6s %s%s\n' "$(basename "$f" | cut -d- -f1)" "$title" "$mark"
+    printf '  %-13s %s%s\n' "$(basename "$f" | cut -d- -f1)" "$title" "$mark"
   done
   echo "  → disagree with one? supersede it with a new record; don't re-litigate silently."
   echo

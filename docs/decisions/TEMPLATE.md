@@ -1,4 +1,4 @@
-# ADR-NNNN: <the decision, as a statement not a question>
+# ADR-YYYYMMDDHHMM: <the decision, as a statement not a question>
 
 - **Status:** Accepted
 - **Date:** YYYY-MM-DD
