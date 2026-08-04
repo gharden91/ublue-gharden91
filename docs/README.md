@@ -139,6 +139,19 @@ Before moving to `stable-45` (or later):
   negativo17's, and the two are documented as incompatible. Don't add RPM
   Fusion for codec-adjacent packages in future customizations.
 
+### Local VM testing (see [local-testing.md](./local-testing.md))
+
+- **The pinned VM runner tag never auto-updates.** `just run-vm` pins
+  `docker.io/qemux/qemu:7.36` because 7.37+ rejects our compressed qcow2s and
+  **silently boots Alpine instead of the image** (ADR-0014). The danger is that
+  the VM comes up looking healthy, so a boot "test" can pass against the wrong
+  OS entirely — check the GRUB entry says `Bazzite`. Recheck newer releases
+  periodically and bump the pin once upstream fixes the probe.
+- **The pin ages against the host.** An old runner can eventually break against
+  a newer host kernel/KVM/podman. If it does, boot the qcow2 with host
+  `qemu-system-x86_64` (documented in `local-testing.md`) while sorting out a
+  newer runner.
+
 ### Adding a new entry
 
 When adding a new customization that could break as the base image evolves,

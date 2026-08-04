@@ -28,6 +28,7 @@ section tell you whether a record still binds.
 | [0011](0011-rendering-claims-require-a-boot-test.md) | Rendering/desktop-integration claims require a boot test, not a build signal | Accepted | repo |
 | [0012](0012-knowledge-capture-is-a-skill-not-a-hook.md) | Knowledge capture is a skill (`/handoff`), not an enforcing hook | Accepted | repo |
 | [0013](0013-drop-edge-and-revert-immutable-opt.md) | Drop native Edge and revert `/opt` to the base symlink | Accepted | edge |
+| [0014](0014-pin-the-vm-runner-image.md) | Pin the local VM runner image instead of tracking `latest` | Accepted | local testing |
 
 > **Most of these were backfilled** in one pass (0001–0011) from `git log`, the
 > `docs/` pages, and the code when the knowledge system was set up — the

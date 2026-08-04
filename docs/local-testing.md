@@ -82,9 +82,7 @@ podman run --rm -it ublue-gharden91:latest bash
 > files are present. To see PlasmaZones actually working you need to boot the
 > image (see below) into a Plasma session.
 
-## Build a bootable disk image (optional)
-
-The container test above is enough to verify a package installs. To actually see if the gui works, run.
+## Poke around inside the built image
 
 ```bash
 podman run --rm -it -e HOME=/tmp ublue-gharden91:latest bash
@@ -132,15 +130,42 @@ Notes:
 
 ### If the VM boots Alpine instead of the image
 
-As of 2026-07-19, the `docker.io/qemux/qemu` runner image (v7.37, pulled fresh
-by the recipe's `--pull=newer`) rejects our disk with
-`ERROR: Failed to read the complete GPT partition entry array!` and silently
-falls back to downloading Alpine. The qcow2 itself is fine (`qemu-img check`
-passes) — the runner's homegrown GPT probe fails against compressed qcow2s
-like bootc-image-builder's output. Older runner versions (e.g. whatever was
-cached in early July 2026) worked.
+**Fixed by pinning — see below if it recurs.** `qemux/qemu` **7.37**
+(2026-07-19) added a GPT probe to its boot detection that rejects
+`bootc-image-builder`'s compressed qcow2s with:
 
-Workaround: boot the disk directly with host QEMU from the repo root:
+```
+ERROR: Failed to read the complete GPT partition entry array!
+❯ Retrieving latest Alpine Linux version...
+```
+
+It then silently downloads and boots Alpine, so you land at an Alpine login
+prompt instead of the image. **The disk is fine** — `qemu-img check` passes; the
+probe is what's wrong. Rebuilding the image does not help.
+
+`_run-vm` therefore pins `docker.io/qemux/qemu:7.36`, the newest tag that
+predates the probe (7.33–7.36 have no such code), and uses `--pull=missing` so
+`latest` is not silently pulled back in. As of 2026-08-04 the bug is still
+present in `latest` (7.43), and upstream has no commit addressing it.
+
+To retest a newer release without editing the Justfile:
+
+```bash
+VM_RUNNER_IMAGE=docker.io/qemux/qemu:latest just run-vm
+```
+
+If a fixed release appears, bump the pinned tag in `_run-vm`. To confirm whether
+a given tag has the offending probe:
+
+```bash
+podman run --rm --entrypoint bash docker.io/qemux/qemu:TAG \
+  -c 'grep -c "GPT partition entry array" /run/install.sh'
+```
+
+`0` means the tag is safe.
+
+Fallback that bypasses the runner container entirely — boot the disk with host
+QEMU from the repo root:
 
 ```bash
 qemu-system-x86_64 -enable-kvm -m 8G -smp 4 -cpu host \
@@ -148,9 +173,7 @@ qemu-system-x86_64 -enable-kvm -m 8G -smp 4 -cpu host \
   -bios /usr/share/OVMF/OVMF_CODE.fd
 ```
 
-(UEFI firmware is required; no web VNC — QEMU opens a native window. The
-longer-term fix is pinning `qemux/qemu` to a known-good tag in the Justfile
-once one is identified.)
+(UEFI firmware is required; no web VNC — QEMU opens a native window.)
 
 What to check once it boots:
 
@@ -165,3 +188,42 @@ What to check once it boots:
 
 A successful `just build` ends with `bootc container lint` passing and prints
 `Successfully tagged localhost/ublue-gharden91:latest`.
+
+## Clean up local build artifacts
+
+Disk-image builds are big — each qcow2 is ~7–8 GB — and they accumulate fast.
+Two things pile up in the repo root:
+
+- `output/` — the finished disk images (`output/qcow2/disk.qcow2`).
+- `_build-bib.*` — temp dirs `bootc-image-builder` creates. Normally moved into
+  `output/` and removed at the end of a build, but an **interrupted or failed
+  build leaves them behind**, each holding a full-size disk image.
+
+Both are gitignored, so `git status` will not warn you about tens of GB sitting
+there. Check with `du -sh output _build-bib.*` and clean up with:
+
+```bash
+just sudo-clean
+```
+
+Use `sudo-clean`, not plain `just clean`: the temp dirs are created by a rootful
+`podman run`, so their contents are root-owned and an unprivileged `rm` fails on
+them. (`just clean` is fine when only `output/` exists.) Both also remove
+`previous.manifest.json`, `changelog.md`, and `output.env`.
+
+> **Why a stale `output/` matters:** `just build-qcow2` finishes by moving its
+> temp dir into `output/`, which fails with `mv: cannot overwrite 'output/qcow2':
+> Directory not empty` if a previous build's output is still there. The build
+> itself succeeds and then the recipe exits 1 at the very last step — so a
+> "failed" qcow2 build is often just this. Run `just sudo-clean` and rebuild.
+
+Podman image layers are separate and not touched by `just clean`. To reclaim
+that space:
+
+```bash
+podman image prune          # dangling layers only
+podman rmi localhost/ublue-gharden91:latest
+```
+
+Removing the base image forces a multi-GB re-pull on the next build, so keep it
+unless you actually need the space.
