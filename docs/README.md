@@ -140,6 +140,22 @@ Before moving to `stable-45` (or later):
   negativo17's, and the two are documented as incompatible. Don't add RPM
   Fusion for codec-adjacent packages in future customizations.
 
+### Base-image provenance (see [provenance.md](./provenance.md))
+
+- **The base labels can go missing without failing the build.** `just build`
+  stamps `org.opencontainers.image.base.name`/`.base.digest` and
+  `org.ublue-gharden91.base-image.version`; nothing asserts they survived.
+  They currently come through `just ostree-rechunk` intact (verified on a
+  published image), but a future rechunker — or a switch to the `chunkah`
+  recipe, which rewrites labels explicitly — could drop them and the build
+  would still go green. Reconciliation would quietly stop working. Spot-check
+  with `skopeo inspect docker://ghcr.io/gharden91/ublue-gharden91:latest`.
+- **`unknown` in the version label means upstream stopped setting theirs.**
+  The version string is read from the base's own
+  `org.opencontainers.image.version`; if Bazzite drops it, ours records
+  `unknown` rather than failing. The digest is still exact, so nothing is
+  really lost — but it's a signal to go read the base's labels directly.
+
 ### Local VM testing (see [local-testing.md](./local-testing.md))
 
 - **The pinned VM runner tag never auto-updates.** `just run-vm` pins
