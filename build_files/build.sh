@@ -107,6 +107,12 @@ dnf5 install -y microsoft-edge-stable
 # self-update mechanism. Force it disabled so the final image doesn't pull
 # third-party updates; updates come from rebuilding the image instead.
 sed -i 's/^enabled=1/enabled=0/' /etc/yum.repos.d/microsoft-edge.repo
+# The sed above only fixes the image. Edge also ships
+# /etc/cron.daily/microsoft-edge, which *recreates* the repo config on a running
+# machine when repo_add_once="true". It never fires today only because no cron
+# implementation is installed in the base — disarm it so the repo stays disabled
+# even if cronie ever appears. See docs/edge.md.
+echo 'repo_add_once="false"' >/etc/default/microsoft-edge
 
 # Use a COPR Example:
 #

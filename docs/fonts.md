@@ -1,9 +1,9 @@
-# Fonts (color emoji) — known issue, manual workaround
+# Fonts (color emoji) — resolved: stale user font cache
 
-> **Status: not fixed in the image (2026-07-27).** An image-level fix was built,
-> merged, and did **not** work on real hardware; it has been reverted. The
-> per-user workaround below does work. See
-> [Why there is no image-level fix](#why-there-is-no-image-level-fix).
+> **Status: resolved (2026-08-04).** Emoji tofu in Chromium apps was never an
+> image problem. It was a stale `~/.cache/fontconfig` in one long-lived home
+> directory. The image needs no fix, and the old "install a CBDT font"
+> workaround should be undone — see [The fix](#the-fix) and ADR-0013.
 
 ## Symptom
 
@@ -13,26 +13,25 @@ render them correctly.
 
 Two things make the scope easy to misread when diagnosing this:
 
-- **Discord looks fine.** It ships its own emoji as images and never touches
-  the system font, so it proves nothing either way.
-- **VS Code is the useful test.** It is Electron (Chromium) installed natively
-  from this image, so if it breaks too, the problem is Chromium-wide rather
-  than Edge-specific.
+- **Discord looks fine.** It ships its own emoji as images and never touches the
+  system font, so it proves nothing either way.
+- **VS Code is the useful test.** It is Electron (Chromium) and ships in the
+  base image, so it reproduces the problem without installing anything.
 
-## Workaround
+## The fix
 
-Install upstream's CBDT (bitmap) build of Noto Color Emoji into your user font
-directory:
+Rebuild the user font cache, then fully restart the affected app:
 
 ```bash
-mkdir -p ~/.local/share/fonts
-curl -fLo ~/.local/share/fonts/NotoColorEmoji.ttf \
-  https://raw.githubusercontent.com/googlefonts/noto-emoji/main/fonts/NotoColorEmoji.ttf
+rm -rf ~/.cache/fontconfig
 fc-cache -f
 ```
 
-Then fully quit the affected app and reopen it (check `pgrep msedge` is empty —
-a background Edge process will keep the old font set). Verify with:
+**Fully quit the Chromium app** — a lingering background process keeps the old
+font set. Confirm with `pgrep -f /usr/share/code` (VS Code) or `pgrep msedge`
+(Edge) before reopening.
+
+Verify by pasting 🧠✨😀 into an editor, or in a browser:
 
 ```
 data:text/html;charset=utf-8,<div style="font-size:60px">🧠✨😀</div>
@@ -42,100 +41,72 @@ The `charset=utf-8` is load-bearing. A `data:` URL without it decodes as
 Latin-1 and renders mojibake (`ðŸ§ âœ¨`), which looks like a font failure but
 is a completely different problem.
 
-This is per-user and lives in `$HOME`, so it survives image rebases and
-updates. Remove the file once the underlying issue is fixed upstream —
-see [When to drop this](#when-to-drop-this).
+**If you previously applied the old workaround**, remove the now-redundant font
+so the machine matches a clean install, then rebuild the cache again:
+
+```bash
+rm -f ~/.local/share/fonts/NotoColorEmoji.ttf
+fc-cache -f
+```
 
 ## Root cause
 
-Fedora 43+ ships Noto Color Emoji as a
+`fontconfig` caches font metadata per user in `~/.cache/fontconfig`. On a home
+directory that has survived many image rebases, that cache can end up describing
+a font set the system no longer has. Chromium enumerates fonts through that
+cache, so it searched a stale picture of the world for emoji glyphs and drew
+`.notdef` boxes. Qt/GTK apps and Firefox resolve fonts differently and were
+unaffected — which is exactly what made this look like a Chromium-specific
+COLRv1 incompatibility.
+
+The affected machine held 174 cache entries, the oldest seven months old; a
+rebuild produced 67.
+
+Fedora 43+ shipping Noto Color Emoji as a
 [COLRv1 font](https://fedoraproject.org/wiki/Changes/Use_COLR_for_Noto_Color_Emoji)
-(`Noto-COLRv1.ttf`) instead of the older CBDT bitmap build. Chromium's font
-stack on this image cannot use that font:
+is real, but it is **not** the cause. Chromium renders COLRv1 emoji correctly on
+this image with no user-level font installed — verified by VM boot.
 
-- emoji fall back to the page's body font (Noto Sans, Liberation Sans, …),
-  which has no emoji glyphs, so the browser draws `.notdef` boxes;
-- an explicit `font-family:'Noto Color Emoji'` **also** fails, which
-  distinguishes this from an ordinary fallback-ordering problem. Chromium is
-  not picking the wrong emoji font — it cannot use that font at all.
+## Why the diagnosis took three attempts
 
-Everything on the fontconfig side is correct on a running machine, which is
-what makes this misleading:
+Worth reading before trusting a font diagnostic again.
+
+**`fc-match` is not evidence about what an app sees.** Every check looked
+correct on the broken machine:
 
 ```bash
 fc-match emoji                          # -> Noto-COLRv1.ttf, correct
 fc-list :color=true family              # -> includes Noto Color Emoji
 fc-match ":charset=1F9E0:color=true"    # -> Noto Color Emoji, correct
-fc-list :lang=und-zsye family           # -> includes Noto Color Emoji
 ```
 
-The font is installed, flagged as a color font, tagged with the emoji
-language, and resolved correctly by every query — and Chromium still can't use
-it. The other emoji fonts the base image ships (`Symbola`, `Twemoji`,
-`Noto Emoji`) are **not** the cause; they were investigated and cleared.
+These rebuild their view on demand, so they reported the *correct* font set
+while Chromium read the *stale* one. Healthy `fc-match` output proves
+fontconfig's query path works — nothing more.
 
-## Why there is no image-level fix
+**The old workaround worked for the wrong reason.** Dropping a CBDT
+`NotoColorEmoji.ttf` into `~/.local/share/fonts` fixed emoji because the
+instructions ended in `fc-cache -f`, which rebuilt the cache. The font's
+location was irrelevant. That misattribution created the phantom "same font
+works from `~/.local/share/fonts` but not `/usr/share/fonts`" mystery that
+blocked progress for weeks — there was no such mechanism.
 
-Two image-level approaches were tried and both failed. Neither is worth
-repeating.
+**It made a working image fix look broken.** An image-level attempt (ship CBDT,
+delete Fedora's COLRv1) was correct at build time and in the image, but was
+tested on the machine with the stale cache, appeared to fail, and was reverted.
+ADR-0010 (superseded) records what was tried.
 
-**Attempt 1 — install the CBDT font, reject COLRv1 in fontconfig.** Added the
-CBDT font to `/usr/share/fonts/` plus a
-`<selectfont><rejectfont><glob>` drop-in in `/etc/fonts/conf.d/`. Both files
-declare the identical family name `Noto Color Emoji`, so something has to break
-the tie. The drop-in was copied into place correctly and had **no effect** on
-this base image: the build log showed `fc-match emoji` still resolving to
-COLRv1. (The same drop-in does work on other distributions' fontconfig, which
-is what made it look correct when it was tested off-image.)
+**False leads, now closed:** immutable `/opt` and native Edge were both
+suspected of interfering with Chromium's font access, and issue #17 proposed
+removing both. Neither is involved — emoji render identically with `/opt`
+immutable + Edge installed and with `/opt` symlinked + Edge absent. ADR-0013 has
+the comparison table.
 
-**Attempt 2 — install the CBDT font, delete Fedora's COLRv1 file.** Deletion is
-behaviour rather than configuration, so it doesn't depend on fontconfig
-semantics. This worked *at build time* — the build log confirmed the removal
-and that `fc-match emoji` resolved to the CBDT build inside the image:
+## If it comes back
 
-```
-Noto Color Emoji (CBDT) from ref 'main': 10673480 bytes, validated.
-Removing Fedora's COLRv1 emoji font: /usr/share/fonts/google-noto-color-emoji-fonts/Noto-COLRv1.ttf
-Emoji font check: 'emoji' resolves to the CBDT build — Chromium-based apps OK.
-```
-
-It was merged, and **emoji were still broken on the booted machine.** Adding
-the identical font file to `~/.local/share/fonts` on that same machine fixed
-it immediately.
-
-### The unexplained part
-
-The same font file works from `~/.local/share/fonts` and does not work from
-`/usr/share/fonts/`. That is the crux, and it is not yet understood. Whatever
-the mechanism is, it means:
-
-- correct font resolution at *build* time does not imply correct rendering at
-  *runtime*, so the build-time `fc-match` assertion used in attempt 2 was not
-  the safety net it appeared to be;
-- the problem is about how the image exposes fonts under `/usr` to Chromium,
-  not about the font file, the font format, or fontconfig's matching rules —
-  all of which were verified correct.
-
-Plausible leads for a future attempt, none of them tested:
-
-- the font cache generated at build time versus what a Chromium font service
-  reads at runtime (`/usr/lib/fontconfig/cache`), possibly interacting with
-  the `ostree-rechunk` step;
-- a stale per-user cache in `~/.cache/fontconfig` masking the image's fonts —
-  worth trying `fc-cache -f` alone, before installing anything, on a machine
-  freshly rebased onto an image that includes the font;
-- Chromium's sandbox and which font directories it can open on a bootc image
-  where Edge lives in `/opt`.
-
-## When to drop this
-
-The workaround exists only because Chromium-based apps can't use Fedora's
-COLRv1 build. When either side fixes that, delete
-`~/.local/share/fonts/NotoColorEmoji.ttf`, run `fc-cache -f`, and check the
-test page again. Worth retesting after major Edge/Electron updates and after
-each Fedora base bump.
-
-If you retry an image-level fix, note that the *only* trustworthy verification
-is booting the image with no user-level font installed and looking at emoji in
-Edge and VS Code. A green build proves nothing here — that was already
-demonstrated once.
+A recurrence on a machine whose cache was rebuilt *after* the image's fonts last
+changed would be genuinely new information, not a repeat of this. Check a fresh
+user account first: if a new user renders emoji correctly and an existing one
+doesn't, it is user cache state again, not the image. Reproduce at the
+real-hardware tier ([verifying-changes.md](./verifying-changes.md)) — a green
+build proves nothing about rendering (ADR-0011).

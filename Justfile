@@ -44,12 +44,14 @@ fix:
 clean:
     #!/usr/bin/bash
     set -eoux pipefail
-    touch _build
-    find *_build* -exec rm -rf {} \;
+    shopt -s nullglob
+    # bootc-image-builder leaves root-owned _build-bib.* temp dirs behind when a
+    # build is interrupted; those need `just sudo-clean`. rm -rf (not find -exec)
+    # so a failure on one path can't abort the recipe before output/ is removed.
+    rm -rf _build _build_* _build-bib.* output/
     rm -f previous.manifest.json
     rm -f changelog.md
     rm -f output.env
-    rm -rf output/
 
 # Sudo Clean Repo
 [group('Utility')]
@@ -413,7 +415,7 @@ _run-vm $target_image $tag $type $config:
     # Set up the arguments for running the VM
     run_args=()
     run_args+=(--rm --privileged)
-    run_args+=(--pull=newer)
+    run_args+=(--pull=missing)
     run_args+=(--publish "127.0.0.1:${port}:8006")
     run_args+=(--env "CPU_CORES=4")
     run_args+=(--env "RAM_SIZE=8G")
@@ -422,7 +424,10 @@ _run-vm $target_image $tag $type $config:
     run_args+=(--env "GPU=Y")
     run_args+=(--device=/dev/kvm)
     run_args+=(--volume "${PWD}/${image_file}":"/boot.${type}")
-    run_args+=(docker.io/qemux/qemu)
+    # Pinned: 7.37+ added a GPT probe that rejects bootc-image-builder's
+    # compressed qcow2s and silently boots Alpine instead. 7.36 is the newest
+    # tag without it. Override with VM_RUNNER_IMAGE= to retest a newer release.
+    run_args+=("${VM_RUNNER_IMAGE:-docker.io/qemux/qemu:7.36}")
 
     # Run the VM and open the browser to connect
     (sleep 30 && xdg-open http://localhost:"$port") &

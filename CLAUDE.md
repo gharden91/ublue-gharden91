@@ -25,7 +25,7 @@ Depth pages, each edited in place:
 - [`docs/edge.md`](docs/edge.md) — Microsoft Edge native RPM; the `/opt` immutability story.
 - [`docs/discord.md`](docs/discord.md) — Discord official RPM, deliberately unpinned.
 - [`docs/vlc.md`](docs/vlc.md) — VLC from negativo17 fedora-multimedia, not RPM Fusion.
-- [`docs/fonts.md`](docs/fonts.md) — color-emoji tofu in Chromium apps; the per-user workaround.
+- [`docs/fonts.md`](docs/fonts.md) — color-emoji tofu: resolved; it was a stale per-user font cache.
 - [`docs/README.md`](docs/README.md) — docs index + the **Maintenance Watchlist** of what can rot silently.
 
 **Before proposing a substrate, a packaging approach, a repo/COPR, or a rewrite —
@@ -59,6 +59,9 @@ These hold across the whole image; the per-feature reasoning is in `docs/` and
 - **`/opt` is a real, immutable directory** (`RUN rm /opt && mkdir /opt`),
   which native Edge's RPM needs. This overrides the base's `/opt -> /var/opt`
   symlink; see ADR-0007 and `docs/edge.md` for the containerd caveat.
+  **Edge is the only package that installs there** (verified: nothing else in
+  the image owns a file under `/opt`), so dropping Edge means dropping this
+  line too — and keeping Edge means keeping it.
 - **Third-party repos are never left enabled** on the final image. Edge's repo
   is force-disabled after install; VLC and negativo17 use per-transaction
   `--enable-repo`. Keep it that way.
