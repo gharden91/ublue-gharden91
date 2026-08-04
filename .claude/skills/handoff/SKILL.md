@@ -16,6 +16,7 @@ so is part of the job.
     git status --short
     git diff --stat HEAD
     git log --oneline origin/main..HEAD
+    gh pr status          # is this branch already a PR? is review waiting on you?
 
 Then re-read the conversation for things that left **no trace in the diff** —
 that's where the value is, and the part that dies at session end:
@@ -38,6 +39,7 @@ that's where the value is, and the part that dies at session end:
 | Changed behavior, data shape, or invariant | Edit `CLAUDE.md` / the `docs/` page **in place** |
 | Something learned that cost an hour | The relevant `docs/` page (+ the Watchlist in `docs/README.md` if it can rot silently) |
 | Work discovered but not done | A [GitHub issue](https://github.com/gharden91/ublue-gharden91/issues) |
+| Why *this* diff, and how far you verified it | The **PR body** — that's the reviewer's context |
 | What happened, blow by blow | **Nowhere.** That's the diff and the commit message. |
 
 ## 3. Write decision records
@@ -61,13 +63,37 @@ the base image moves, add/adjust its bullet in the Maintenance Watchlist.
 ## 5. File issues, don't leave TODOs
 
 Anything discovered and not done becomes an issue. Never a code comment, a doc,
-or the conversation. If the session closed something already filed, close it and
-reference it in the commit body.
+or the conversation. If the session closed something already filed, reference it
+in the commit body and put `Closes #N` in the **PR** body — the merge closes it.
 
 ## 6. Commit
 
 One commit, with a body explaining **why**, not just what. Reference issues
-closed. Run `just check` (and `just build` if the build changed), then push.
+closed. Run `just check` (and `just build` if the build changed), then push to
+the branch — never to `main`.
+
+## 7. Open or update the PR
+
+Check first: `gh pr view --json number,title,body,isDraft`. If the branch
+already has a PR, **push and edit that one** (`gh pr edit --body-file -`);
+opening a second PR for the same work splits the review. Otherwise
+`gh pr create`.
+
+The body is the one place the reviewer reads, so it carries the handoff:
+
+- **Why**, in a paragraph — the same reasoning as the commit body, no re-listing
+  of the diff.
+- `Closes #N` for every issue this finishes.
+- A link to any `docs/decisions/` record written this session, and a line on
+  what was turned down.
+- **The tier you actually verified at** — `just check`, `just build` +
+  `podman run`, VM boot, or real hardware — stated plainly. If a
+  desktop-visible change was only build-verified, say so; per ADR-0011 that is
+  *not* verified, and the reviewer needs to know which claim they're accepting.
+
+Draft it if the verification tier isn't reached yet. Address review comments by
+pushing to the same branch. **Leave merging to the human** — and don't
+force-push a branch that has review comments on it.
 
 ## What to push back on
 
