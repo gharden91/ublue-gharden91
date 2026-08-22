@@ -39,6 +39,15 @@ pinned_version() {
     sed -n "s/^${key}=\"\\\${${key}:-\\([0-9.]*\\)}\"/\\1/p" build_files/build.sh | head -n1
 }
 
+# Read a `ARG KEY=default` value out of Containerfile — how BAZZITE_VERSION
+# is pinned (unlike PWSH_VERSION/PLASMAZONES_VERSION, deliberately with no
+# env-var override in CI; see ADR-202608222345), so this doesn't check the
+# environment first the way pinned_version() does.
+containerfile_arg() {
+    local key="$1"
+    sed -n "s/^ARG ${key}=\\([0-9.]*\\)\$/\\1/p" Containerfile | head -n1
+}
+
 # Latest GitHub release tag for owner/repo, with a leading "v" stripped.
 latest_gh_release() {
     local repo="$1" auth=()
@@ -77,10 +86,12 @@ check_pinned_version() {
 }
 
 # Whether the base image's Fedora-versioned tag (bazzite-dx:stable-<NN>) is
-# still what the floating `stable` tag currently resolves to.
+# still what the floating `stable` tag currently resolves to. The FROM line
+# itself just says stable-${BAZZITE_VERSION} (ADR-202608222345); the actual
+# pinned number is the ARG default, same as Justfile's build recipe reads it.
 check_fedora_currency() {
     local pinned_major stable_version stable_major
-    pinned_major="$(sed -n 's/.*bazzite-dx:stable-\([0-9]\+\).*/\1/p' Containerfile | head -n1)"
+    pinned_major="$(containerfile_arg BAZZITE_VERSION)"
     stable_version="$(skopeo inspect docker://ghcr.io/ublue-os/bazzite-dx:stable 2>/dev/null |
         jq -r '.Labels."org.opencontainers.image.version" // empty')"
     stable_major="${stable_version%%.*}"

@@ -86,9 +86,11 @@ this list is just the "what could rot" summary in one place.
 
 ### Bumping the Fedora version
 
-The `Containerfile`'s `FROM` line is pinned to `ghcr.io/ublue-os/bazzite-dx:stable-44`
-specifically so it and the PlasmaZones COPR stay on the same Fedora release.
-Before moving to `stable-45` (or later):
+The `Containerfile`'s `FROM` line is pinned to
+`ghcr.io/ublue-os/bazzite-dx:stable-${BAZZITE_VERSION}`, where
+`BAZZITE_VERSION` is a build arg defaulting to `44` — specifically so it and
+the PlasmaZones COPR stay on the same Fedora release. Before moving the
+default to `45` (or later):
 
 1. Confirm the pinned PlasmaZones release has an RPM asset for the target
    Fedora version on the
@@ -110,11 +112,22 @@ Before moving to `stable-45` (or later):
    ```bash
    grep VERSION_ID= /etc/os-release; uname -m
    ```
-3. Bump the `FROM` tag in the `Containerfile` and rebuild locally
+3. Test-build against the candidate **before** touching the file, via the
+   `BAZZITE_VERSION` build-arg override:
+
+   ```bash
+   BAZZITE_VERSION=45 just build
+   ```
+
    (see [local-testing.md](./local-testing.md)) to confirm `plasmazones` still
-   installs and `pwsh` still runs.
-4. Only merge the bump once all checks pass — don't let the base image and
-   the COPR drift to different Fedora versions.
+   installs and `pwsh` still runs. This is a local override only — CI never
+   sets `BAZZITE_VERSION` (see
+   [ADR-202608222345](decisions/202608222345-bazzite-version-buildarg-no-repo-variable.md));
+   the daily scheduled build always uses whatever's in the file.
+4. Once the test build passes, bump the `ARG BAZZITE_VERSION=44` default in
+   `Containerfile` itself and open a PR. Only merge the bump once all checks
+   pass — don't let the base image and the COPR drift to different Fedora
+   versions.
 
 ### PowerShell 7 (see [powershell.md](./powershell.md))
 

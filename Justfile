@@ -109,6 +109,15 @@ build $target_image=image_name $tag=default_tag:
     if [[ -n "${PLASMAZONES_VERSION:-}" ]]; then
         BUILD_ARGS+=("--build-arg" "PLASMAZONES_VERSION=${PLASMAZONES_VERSION}")
     fi
+    # Forward a candidate Bazzite Fedora-version override, for locally
+    # test-building against e.g. stable-45 before committing to it in
+    # Containerfile (see "Bumping the Fedora version" in docs/README.md).
+    # Deliberately not set from a repo variable in CI — unlike PWSH_VERSION/
+    # PLASMAZONES_VERSION, the base pin only moves via a reviewed Containerfile
+    # edit (ADR-0003, ADR-202608222345).
+    if [[ -n "${BAZZITE_VERSION:-}" ]]; then
+        BUILD_ARGS+=("--build-arg" "BAZZITE_VERSION=${BAZZITE_VERSION}")
+    fi
 
     # Resolve the base image this build sits on, so an output tag
     # (e.g. latest-20260802-df42ed9) can be reconciled back to the exact base it
@@ -117,7 +126,15 @@ build $target_image=image_name $tag=default_tag:
     # else records which digest that was. Read the FROM line rather than
     # duplicating the ref here, so the Containerfile stays the single source of
     # truth. See ADR-0015 for why the base is deliberately left unpinned.
-    BASE_IMAGE=$(awk '$1 == "FROM" { image = $2 } END { print image }' Containerfile)
+    #
+    # The FROM line's Fedora version is itself the BAZZITE_VERSION build arg
+    # (see Containerfile), so substitute in the same value this build will
+    # actually use — the override above if set, else the Containerfile's own
+    # ARG default — before resolving/pulling it.
+    BASE_IMAGE_TEMPLATE=$(awk '$1 == "FROM" { image = $2 } END { print image }' Containerfile)
+    BAZZITE_VERSION_DEFAULT=$(sed -n 's/^ARG BAZZITE_VERSION=\([0-9]*\)$/\1/p' Containerfile)
+    RESOLVED_BAZZITE_VERSION="${BAZZITE_VERSION:-${BAZZITE_VERSION_DEFAULT}}"
+    BASE_IMAGE="${BASE_IMAGE_TEMPLATE//\$\{BAZZITE_VERSION\}/${RESOLVED_BAZZITE_VERSION}}"
     # Pull now so the digest we inspect is the one the build will use (the build
     # itself only re-pulls if newer, which this just made current).
     podman pull --quiet "${BASE_IMAGE}"

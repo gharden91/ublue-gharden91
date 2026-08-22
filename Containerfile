@@ -1,14 +1,25 @@
+# Bazzite's Fedora-version tag suffix, overridable at build time
+# (--build-arg BAZZITE_VERSION=45) to test-build against a candidate Fedora
+# bump before committing to it. Must be declared before the first FROM to be
+# usable in one. The default below is the actual pin (ADR-0003): bumping it
+# is a reviewed Containerfile edit per "Bumping the Fedora version" in
+# docs/README.md, not something CI overrides — unlike PWSH_VERSION /
+# PLASMAZONES_VERSION, there is deliberately no repo-variable override for
+# this one (see ADR-202608222345).
+ARG BAZZITE_VERSION=44
+
 # Allow build scripts to be referenced without being copied into the final image
 FROM scratch AS ctx
 COPY build_files /
 COPY system_files /system_files
 
 # Base Image
-# Pinned to stable-44 (rather than the floating "stable" tag) to keep the
-# Fedora version in lockstep with the fuddlesworth/PlasmaZones COPR, which
-# only ships builds for specific Fedora releases. See docs/README.md's
-# Maintenance Watchlist before bumping this to stable-45.
-FROM ghcr.io/ublue-os/bazzite-dx:stable-44
+# Pinned to stable-<BAZZITE_VERSION> (rather than the floating "stable" tag)
+# to keep the Fedora version in lockstep with the fuddlesworth/PlasmaZones
+# COPR, which only ships builds for specific Fedora releases. See
+# docs/README.md's Maintenance Watchlist before bumping the ARG default above
+# to stable-45.
+FROM ghcr.io/ublue-os/bazzite-dx:stable-${BAZZITE_VERSION}
 ## Other possible base images include:
 # FROM ghcr.io/ublue-os/bazzite:testing
 # FROM ghcr.io/ublue-os/aurora:stable
