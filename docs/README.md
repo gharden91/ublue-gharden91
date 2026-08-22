@@ -32,17 +32,16 @@ it's supposed to — because the base image changed underneath us. Check these
 periodically, and especially whenever bumping the base image tag or after a
 build starts behaving oddly.
 
-**Three of these are checked for you.** `.github/workflows/drift-check.yml`
+**Four of these are checked for you.** `.github/workflows/drift-check.yml`
 runs weekly (and on demand via `workflow_dispatch`) and files or updates a
-`drift-watch`-labeled issue when it finds: a new PlasmaZones release, the
-pinned PlasmaZones RPM no longer matching the base image's KWin, or the base
-Fedora version becoming stale (`stable-44` behind what `stable` currently
-resolves to). See
+`drift-watch`-labeled issue when it finds: a new PlasmaZones release, a new
+PowerShell release, the pinned PlasmaZones RPM no longer matching the base
+image's KWin, or the base Fedora version becoming stale (`stable-44` behind
+what `stable` currently resolves to). See
 [ADR-202608222309](decisions/202608222309-scheduled-drift-check-workflow.md)
-for what it watches and, as importantly, what it deliberately doesn't
-(PowerShell — that's Renovate's job per ADR-0015 once built; template drift —
-still manual, see ADR-202608042137). Everything else below is still a manual
-check.
+for what it watches and why PowerShell is covered here as a stopgap even
+though ADR-0015 assigns it a Renovate PR long-term. Template drift is still
+manual (see ADR-202608042137). Everything else below is still a manual check.
 
 **Why `stable-44` and not the floating `stable` tag:** `bazzite-dx:stable`
 tracks whatever Fedora release Bazzite currently ships, and jumps to the next
