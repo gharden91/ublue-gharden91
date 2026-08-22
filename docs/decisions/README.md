@@ -33,6 +33,7 @@ section tell you whether a record still binds.
 | [0016](0016-one-idea-per-issue-one-issue-per-pr.md) | One idea per issue, one issue per PR | Accepted | repo |
 | [202608042129](202608042129-timestamp-ids-for-decision-records.md) | Timestamp-based IDs for decision records | Accepted | repo |
 | [202608042137](202608042137-no-automated-template-sync.md) | Don't rebase/merge from the upstream template; port changes by hand | Accepted | repo |
+| [202608222309](202608222309-scheduled-drift-check-workflow.md) | Watch PlasmaZones, KWin skew, and Fedora currency with a scheduled workflow that files an issue | Accepted | repo |
 
 > **Most of these were backfilled** in one pass (0001–0011) from `git log`, the
 > `docs/` pages, and the code when the knowledge system was set up — the

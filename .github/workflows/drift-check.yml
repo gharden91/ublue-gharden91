@@ -1,0 +1,76 @@
+---
+name: Check upstream drift
+on:
+  schedule:
+    - cron: '30 9 * * 1'  # 9:30am UTC every Monday
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  check-drift:
+    name: Check Maintenance Watchlist for drift
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: Install skopeo
+        run: sudo apt-get update && sudo apt-get install -y skopeo rpm
+
+      - name: Run drift checks
+        id: check
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          bash .github/scripts/check-drift.sh drift-report.md
+          if [[ -s drift-report.md ]]; then
+            echo "drifted=true" >> "${GITHUB_OUTPUT}"
+          else
+            echo "drifted=false" >> "${GITHUB_OUTPUT}"
+          fi
+
+      - name: Ensure the drift-watch label exists
+        if: steps.check.outputs.drifted == 'true'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: |
+          gh label create drift-watch --repo "${REPO}" --force \
+            --color "d93f0b" \
+            --description "Filed by drift-check.yml: upstream moved, review against the Maintenance Watchlist"
+
+      - name: File or update the drift issue
+        if: steps.check.outputs.drifted == 'true'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+
+          TITLE="Upstream drift detected"
+          BODY_FILE="$(mktemp)"
+          {
+            echo "Automated drift check found upstream changes worth reviewing"
+            echo "against this image's Maintenance Watchlist"
+            echo "(docs/README.md#maintenance-watchlist)."
+            echo
+            cat drift-report.md
+            echo "---"
+            echo "_Filed by [drift-check.yml](https://github.com/${REPO}/actions/workflows/drift-check.yml)_"
+          } >"${BODY_FILE}"
+
+          existing="$(gh issue list --repo "${REPO}" --label drift-watch --state open \
+                        --json number --jq '.[0].number // empty')"
+          if [[ -n "${existing}" ]]; then
+            echo "Updating existing drift issue #${existing}"
+            gh issue edit "${existing}" --repo "${REPO}" --body-file "${BODY_FILE}"
+            gh issue comment "${existing}" --repo "${REPO}" \
+              --body "Re-checked $(date -u +%Y-%m-%d) — drift still present, report body updated above."
+          else
+            echo "Filing a new drift issue"
+            gh issue create --repo "${REPO}" --title "${TITLE}" \
+              --label drift-watch --body-file "${BODY_FILE}"
+          fi
