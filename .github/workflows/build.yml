@@ -102,7 +102,10 @@ jobs:
       - name: Generate Build Tags
         id: gen-build-tags
         run: |
-          alias_tags="$(just generate-build-tags \
+          # Needs sudo now that it inspects the built image (#39):
+          # Build/Rechunk populated podman's root-owned storage, and the
+          # unprivileged runner user can't see into it ("image not known").
+          alias_tags="$(sudo -E $(command -v just) generate-build-tags \
                         ${IMAGE_NAME} \
                         ${DEFAULT_TAG})"
 
