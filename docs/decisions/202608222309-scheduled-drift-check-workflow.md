@@ -3,7 +3,7 @@
 - **Status:** Accepted
 - **Date:** 2026-08-22
 - **Scope:** repo
-- **Shipped in:** the PR closing part of #19
+- **Shipped in:** the PR closing #19
 
 ## The question
 
