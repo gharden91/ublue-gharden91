@@ -21,9 +21,21 @@ REPO_URL="https://github.com/gharden91/ublue-gharden91/blob/main"
 
 log() { echo "check-drift: $*" >&2; }
 
-# Read a `KEY="${KEY:-default}"` pin out of build_files/build.sh.
+# The effective pinned version for PWSH_VERSION / PLASMAZONES_VERSION,
+# resolved the same way the real build does: build.yml passes the repo
+# variable (Settings > Actions > Variables) through as an env var of the
+# same name, Justfile forwards it as a --build-arg only if it's non-empty,
+# and Containerfile/build.sh's own hardcoded defaults are the fallback for
+# when no repo variable is set. Reading only build.sh's literal default (the
+# old behavior here) reports drift against a pin nothing actually builds
+# with once a repo variable is in play.
 pinned_version() {
-    local key="$1"
+    local key="$1" env_val
+    env_val="${!key:-}"
+    if [[ -n "${env_val}" ]]; then
+        printf '%s\n' "${env_val}"
+        return
+    fi
     sed -n "s/^${key}=\"\\\${${key}:-\\([0-9.]*\\)}\"/\\1/p" build_files/build.sh | head -n1
 }
 

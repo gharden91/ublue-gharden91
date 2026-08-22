@@ -24,6 +24,10 @@ jobs:
         id: check
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Same repo-variable override build.yml uses — the actual pin a
+          # real build resolves to, not just build.sh's hardcoded fallback.
+          PWSH_VERSION: ${{ vars.PWSH_VERSION }}
+          PLASMAZONES_VERSION: ${{ vars.PLASMAZONES_VERSION }}
         run: |
           bash .github/scripts/check-drift.sh drift-report.md
           if [[ -s drift-report.md ]]; then
