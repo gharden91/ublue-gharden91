@@ -48,6 +48,23 @@ for the full "what it watches and why," including why PowerShell is covered
 here as a stopgap even though ADR-0015 assigns it a Renovate PR long-term.
 Everything else below is still a manual check.
 
+**Run it yourself between scheduled runs**, e.g. right after noticing
+upstream moved, or to hand a finding to a reviewer/agent immediately instead
+of waiting for the next Monday:
+
+```bash
+GITHUB_TOKEN=$(gh auth token) bash .github/scripts/check-drift.sh /tmp/drift-report.md
+bash .github/scripts/file-drift-issue.sh /tmp/drift-report.md   # prints the issue URL; no-op if the report is empty
+```
+
+`GITHUB_TOKEN` matters here beyond issue-filing auth: `PWSH_VERSION` /
+`PLASMAZONES_VERSION` are GitHub repo variables (Settings > Actions >
+Variables), which only become env vars automatically inside a workflow run.
+A local run without a token (or with the env vars unset) falls back to
+fetching the repo variable directly via the API, and only falls back further
+to `build.sh`'s literal default if that also fails — so an authenticated
+`gh` gets you the same real pin CI checks against, not the stale default.
+
 **Why `stable-44` and not the floating `stable` tag:** `bazzite-dx:stable`
 tracks whatever Fedora release Bazzite currently ships, and jumps to the next
 major version whenever upstream cuts over. PlasmaZones release assets are

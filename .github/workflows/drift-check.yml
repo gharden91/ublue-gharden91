@@ -36,45 +36,9 @@ jobs:
             echo "drifted=false" >> "${GITHUB_OUTPUT}"
           fi
 
-      - name: Ensure the drift-watch label exists
-        if: steps.check.outputs.drifted == 'true'
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          REPO: ${{ github.repository }}
-        run: |
-          gh label create drift-watch --repo "${REPO}" --force \
-            --color "d93f0b" \
-            --description "Filed by drift-check.yml: upstream moved, review against the Maintenance Watchlist"
-
       - name: File or update the drift issue
         if: steps.check.outputs.drifted == 'true'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPO: ${{ github.repository }}
-        run: |
-          set -euo pipefail
-
-          TITLE="Upstream drift detected"
-          BODY_FILE="$(mktemp)"
-          {
-            echo "Automated drift check found upstream changes worth reviewing"
-            echo "against this image's Maintenance Watchlist"
-            echo "(docs/README.md#maintenance-watchlist)."
-            echo
-            cat drift-report.md
-            echo "---"
-            echo "_Filed by [drift-check.yml](https://github.com/${REPO}/actions/workflows/drift-check.yml)_"
-          } >"${BODY_FILE}"
-
-          existing="$(gh issue list --repo "${REPO}" --label drift-watch --state open \
-                        --json number --jq '.[0].number // empty')"
-          if [[ -n "${existing}" ]]; then
-            echo "Updating existing drift issue #${existing}"
-            gh issue edit "${existing}" --repo "${REPO}" --body-file "${BODY_FILE}"
-            gh issue comment "${existing}" --repo "${REPO}" \
-              --body "Re-checked $(date -u +%Y-%m-%d) — drift still present, report body updated above."
-          else
-            echo "Filing a new drift issue"
-            gh issue create --repo "${REPO}" --title "${TITLE}" \
-              --label drift-watch --body-file "${BODY_FILE}"
-          fi
+        run: bash .github/scripts/file-drift-issue.sh drift-report.md

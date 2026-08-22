@@ -17,9 +17,22 @@ REPORT="${1:-drift-report.md}"
 
 # The report becomes a GitHub issue body, which has no notion of "relative to
 # this file" — so docs/ADR links in it need to be absolute.
-REPO_URL="https://github.com/gharden91/ublue-gharden91/blob/main"
+GH_REPO="gharden91/ublue-gharden91"
+REPO_URL="https://github.com/${GH_REPO}/blob/main"
 
 log() { echo "check-drift: $*" >&2; }
+
+# The GitHub repo variables page's value for a given name (Settings > Actions
+# > Variables), i.e. the same override build.yml reads as ${{ vars.<name> }}.
+# Needs GITHUB_TOKEN with repo access (a scheduled workflow's own token
+# already has it; locally, `gh auth token` from an authenticated `gh` works).
+repo_variable() {
+    local name="$1" auth=()
+    [[ -n "${GITHUB_TOKEN:-}" ]] && auth=(-H "Authorization: Bearer ${GITHUB_TOKEN}")
+    curl -fsSL -H "Accept: application/vnd.github+json" "${auth[@]}" \
+        "https://api.github.com/repos/${GH_REPO}/actions/variables/${name}" 2>/dev/null |
+        jq -r '.value // empty' 2>/dev/null
+}
 
 # The effective pinned version for PWSH_VERSION / PLASMAZONES_VERSION,
 # resolved the same way the real build does: build.yml passes the repo
@@ -29,11 +42,21 @@ log() { echo "check-drift: $*" >&2; }
 # when no repo variable is set. Reading only build.sh's literal default (the
 # old behavior here) reports drift against a pin nothing actually builds
 # with once a repo variable is in play.
+#
+# Checks, in order: the same-named env var (what CI sets from ${{ vars.* }}),
+# then the repo variable directly via the API (so a local run without that
+# env var exported still sees the real pin, not just build.sh's fallback),
+# then build.sh's own default.
 pinned_version() {
-    local key="$1" env_val
+    local key="$1" env_val repo_val
     env_val="${!key:-}"
     if [[ -n "${env_val}" ]]; then
         printf '%s\n' "${env_val}"
+        return
+    fi
+    repo_val="$(repo_variable "${key}")"
+    if [[ -n "${repo_val}" ]]; then
+        printf '%s\n' "${repo_val}"
         return
     fi
     sed -n "s/^${key}=\"\\\${${key}:-\\([0-9.]*\\)}\"/\\1/p" build_files/build.sh | head -n1
@@ -122,7 +145,7 @@ check_fedora_currency() {
 # against the base image directly instead of a built image.
 check_kwin_skew() {
     local pinned fedora_release kwin_version tmpdir rpm_url plugin_so
-    local kwin_mm kwin_re plugin_vers v matched
+    local kwin_mm kwin_re plugin_vers v matched base_image
 
     pinned="$(pinned_version PLASMAZONES_VERSION)"
     if [[ -z "${pinned}" ]]; then
@@ -130,9 +153,12 @@ check_kwin_skew() {
         return 0
     fi
 
-    kwin_version="$(podman run --rm ghcr.io/ublue-os/bazzite-dx:stable-44 \
+    # Same base image the real build resolves (ADR-202608222345): the
+    # Containerfile's ARG default, since this check has no override for it.
+    base_image="ghcr.io/ublue-os/bazzite-dx:stable-$(containerfile_arg BAZZITE_VERSION)"
+    kwin_version="$(podman run --rm "${base_image}" \
         rpm -q --whatprovides --qf '%{VERSION}\n' kwin 2>/dev/null | head -n1)" || kwin_version=""
-    fedora_release="$(podman run --rm ghcr.io/ublue-os/bazzite-dx:stable-44 rpm -E %fedora 2>/dev/null)" || fedora_release=""
+    fedora_release="$(podman run --rm "${base_image}" rpm -E %fedora 2>/dev/null)" || fedora_release=""
     if [[ -z "${kwin_version}" || -z "${fedora_release}" ]]; then
         log "KWin skew: could not read the base image's KWin/Fedora version, skipping"
         return 0
