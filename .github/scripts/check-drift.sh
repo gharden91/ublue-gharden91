@@ -157,11 +157,96 @@ check_kwin_skew() {
     return 1
 }
 
+# Whether ublue-os/image-template has touched, since our recorded baseline,
+# any of the files this repo forked from it and now maintains by hand (per
+# ADR-202608042137: no auto-merge, substantive changes get ported by a human
+# who reads the diff). This only tells us *that* the template moved in a
+# watched path — not whether the change is substantive versus a dependency
+# bump Renovate already covers; that judgment call is exactly what
+# ADR-202608042137's file-by-file table (and the #19 comment it points at) is
+# for, and stays with whoever reads the report.
+check_template_drift() {
+    local baseline_file=".github/template-drift-baseline"
+    local template_url="https://github.com/ublue-os/image-template.git"
+    local watched_paths=(
+        ".github/workflows/build.yml"
+        ".github/workflows/build-disk.yml"
+        "Justfile"
+        "Containerfile"
+        "build_files/build.sh"
+        "disk_config"
+    )
+    local baseline head_sha tmpdir changed f
+
+    if [[ ! -f "${baseline_file}" ]]; then
+        log "Template drift: no ${baseline_file}, skipping"
+        return 0
+    fi
+    baseline="$(tr -d '[:space:]' <"${baseline_file}")"
+    if [[ -z "${baseline}" ]]; then
+        log "Template drift: ${baseline_file} is empty, skipping"
+        return 0
+    fi
+
+    head_sha="$(git ls-remote "${template_url}" HEAD 2>/dev/null | cut -f1)"
+    if [[ -z "${head_sha}" ]]; then
+        log "Template drift: could not reach ${template_url}, skipping"
+        return 0
+    fi
+    log "Template drift: baseline=${baseline:0:12} template-head=${head_sha:0:12}"
+    if [[ "${head_sha}" == "${baseline}" ]]; then
+        return 0
+    fi
+
+    tmpdir="$(mktemp -d)"
+    # shellcheck disable=SC2064  # intentional early expansion of $tmpdir
+    trap "rm -rf '${tmpdir}'" RETURN
+    if ! git clone --quiet --no-checkout "${template_url}" "${tmpdir}" 2>/dev/null; then
+        log "Template drift: clone failed, skipping"
+        return 0
+    fi
+    if ! git -C "${tmpdir}" fetch --quiet origin "${baseline}" 2>/dev/null; then
+        log "Template drift: baseline ${baseline:0:12} not found upstream (force-pushed?), skipping"
+        return 0
+    fi
+
+    changed="$(git -C "${tmpdir}" diff --name-only "${baseline}" "${head_sha}" -- "${watched_paths[@]}")" || changed=""
+    if [[ -z "${changed}" ]]; then
+        log "Template drift: template moved but touched none of the watched paths"
+        return 0
+    fi
+    log "Template drift: watched paths changed: $(tr '\n' ' ' <<<"${changed}")"
+
+    {
+        echo "### Template drift (\`ublue-os/image-template\`)"
+        echo
+        echo "The template has moved from \`${baseline:0:12}\` to \`${head_sha:0:12}\` and"
+        echo "touched files this repo forked from it and now diverges from deliberately"
+        echo "(see [ADR-202608042137](${REPO_URL}/docs/decisions/202608042137-no-automated-template-sync.md)):"
+        echo
+        while IFS= read -r f; do
+            echo "- [\`${f}\`](https://github.com/ublue-os/image-template/commits/${head_sha}/${f})"
+        done <<<"${changed}"
+        echo
+        echo "Compare: <https://github.com/ublue-os/image-template/compare/${baseline}...${head_sha}>"
+        echo
+        echo "Read each hunk for *behavioral* changes (signing, rechunk, build steps) and"
+        echo "port those by hand as their own issue/PR; dependency and action-digest bumps"
+        echo "are already covered by Renovate here and can be ignored — see the"
+        echo "file-by-file table on [#19](https://github.com/gharden91/ublue-gharden91/issues/19)."
+        echo "Once reviewed (ported, or deliberately skipped), update \`${baseline_file}\`"
+        echo "to \`${head_sha}\` so this stops re-reporting the same range."
+        echo
+    } >>"${REPORT}"
+    return 1
+}
+
 drifted=0
 check_pinned_version "PlasmaZones" "PLASMAZONES_VERSION" "fuddlesworth/PlasmaZones" "docs/plasmazones.md" || drifted=1
 check_pinned_version "PowerShell" "PWSH_VERSION" "PowerShell/PowerShell" "docs/powershell.md" || drifted=1
 check_fedora_currency || drifted=1
 check_kwin_skew || drifted=1
+check_template_drift || drifted=1
 
 if [[ "${drifted}" -eq 1 ]]; then
     log "drift found, report written to ${REPORT}"
