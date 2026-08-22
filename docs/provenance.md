@@ -132,6 +132,26 @@ podman image inspect ublue-gharden91:latest \
   than failing the build. The digest is still exact, so reconciliation is never
   actually lost — fall back to inspecting the digest directly.
 
+## A tag, not just a label
+
+The three labels above answer "which Bazzite is this?" for someone who
+already has an image in hand and can inspect it. Issue #39 asked for the
+answer to show up one level up — on the tag list itself, so it's visible from
+`skopeo list-tags`, the GHCR package UI, or a `docker pull` invocation,
+without inspecting anything first.
+
+`generate-build-tags` reads back the `org.ublue-gharden91.base-image.version`
+label that `just build` just stamped on the freshly-built image, and adds
+`<tag>-<base-version>` (e.g. `latest-44.20260820`) to the alias tags pushed
+alongside `latest`, `latest-<date>`, etc. If the label comes back `unknown`
+(base image published without a version label — see the caveat below), the
+tag is skipped rather than publishing a `latest-unknown` that means nothing.
+
+This tag isn't a stable pointer — a base bump the next day moves it as
+readily as any other alias — but it means you can look at GHCR's tag list and
+read off which Bazzite version the most recent build sits on, no inspect
+required.
+
 ## Why the base isn't just pinned instead
 
 Digest-pinning the `FROM` line would make provenance trivial, and it was
