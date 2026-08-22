@@ -238,6 +238,17 @@ generate-build-tags $target_image=image_name $tag=default_tag:
     BUILD_TAGS+=("${tag}")
     BUILD_TAGS+=("${tag}-${DATE}")
 
+    # `just build` already stamped the Bazzite version this build resolved
+    # (issue #39, docs/provenance.md) as a label on the freshly-built image.
+    # Surface it as a tag too, so the specific base a pull is running can be
+    # read off the tag list (skopeo/registry UI) without inspecting labels.
+    # Skipped when the label is missing/unknown rather than publishing a
+    # `${tag}-unknown` tag that means nothing.
+    BASE_VERSION=$(podman image inspect "${target_image}:${tag}" --format '{{ '{{index .Config.Labels "org.ublue-gharden91.base-image.version"}}' }}')
+    if [[ -n "${BASE_VERSION}" && "${BASE_VERSION}" != "unknown" ]]; then
+        BUILD_TAGS+=("${tag}-${BASE_VERSION}")
+    fi
+
     echo "${BUILD_TAGS[@]}"
 
 # Tag Images
