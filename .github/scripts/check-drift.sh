@@ -156,6 +156,18 @@ check_kwin_skew() {
     # Same base image the real build resolves (ADR-202608222345): the
     # Containerfile's ARG default, since this check has no override for it.
     base_image="ghcr.io/ublue-os/bazzite-dx:stable-$(containerfile_arg BAZZITE_VERSION)"
+    # `podman run`'s default pull policy is "missing" — it only pulls a tag
+    # that isn't already cached locally. Since stable-<NN> floats (moves
+    # roughly daily), any prior local pull of it (an earlier run of this
+    # script, a `just build`, anything) would otherwise make every run here
+    # silently check a stale cached image forever. Justfile's own `just
+    # build` avoids this with an explicit `podman pull` before inspecting;
+    # do the same here so this check age or someone else's local cache can't
+    # produce a false "KWin skew" against a base that's already moved on.
+    if ! podman pull --quiet "${base_image}" >/dev/null 2>&1; then
+        log "KWin skew: could not pull ${base_image}, skipping"
+        return 0
+    fi
     kwin_version="$(podman run --rm "${base_image}" \
         rpm -q --whatprovides --qf '%{VERSION}\n' kwin 2>/dev/null | head -n1)" || kwin_version=""
     fedora_release="$(podman run --rm "${base_image}" rpm -E %fedora 2>/dev/null)" || fedora_release=""
