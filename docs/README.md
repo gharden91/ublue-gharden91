@@ -22,6 +22,7 @@ settled call. *Open work* lives only in
 - [discord.md](./discord.md) — Discord: official RPM, deliberately unpinned, and why rebuild cadence matters.
 - [vlc.md](./vlc.md) — VLC: negativo17 fedora-multimedia install, why not RPM Fusion.
 - [fonts.md](./fonts.md) — color emoji: resolved; the tofu was a stale per-user `fontconfig` cache, not the image.
+- [template-drift-log.md](./template-drift-log.md) — every upstream template commit reviewed for drift: what it did, ported or skipped, and why.
 
 ## Maintenance Watchlist
 
@@ -42,7 +43,8 @@ image's KWin, the base Fedora version becoming stale (`stable-44` behind what
 touching a file this repo forked from it and now maintains by hand (see
 ADR-202608042137) — tracked against a baseline commit in
 `.github/template-drift-baseline` that a human advances after reviewing each
-reported range. See
+reported range and logging it in
+[template-drift-log.md](./template-drift-log.md). See
 [ADR-202608222309](decisions/202608222309-scheduled-drift-check-workflow.md)
 for the full "what it watches and why," including why PowerShell is covered
 here as a stopgap even though ADR-0015 assigns it a Renovate PR long-term.

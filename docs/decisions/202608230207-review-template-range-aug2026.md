@@ -95,6 +95,15 @@ commit-by-commit review actually needs as a starting point, instead of a
 reviewer having to clone the template and reconstruct the commit list by
 hand each time.
 
+A second follow-up: this ADR's table above is detailed reasoning for one
+range, not something a future reviewer can quickly scan across *all* ranges
+to check "have we already looked at this commit." That's
+[`docs/template-drift-log.md`](../template-drift-log.md) — a flat, append-only
+ledger (one row per commit or per rewrite-group) that every future range adds
+to, cross-referencing back to a dated ADR like this one whenever the range
+needs the fuller writeup. The nine commits in the table above are its first
+entries.
+
 ## What would change our mind
 
 - If a future range shows the same recipe rewritten a third time before we've
