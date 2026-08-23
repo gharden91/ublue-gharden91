@@ -1,0 +1,49 @@
+---
+name: Check upstream drift
+on:
+  schedule:
+    - cron: '30 9 * * 1'  # 9:30am UTC every Monday
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+  # check_kwin_skew() reads the most recent successful build.yml run's log
+  # via `gh run view --log` rather than re-deriving the base image's KWin
+  # itself (see .github/scripts/check-drift.sh) — that needs read access to
+  # this repo's own Actions runs.
+  actions: read
+
+jobs:
+  check-drift:
+    name: Check Maintenance Watchlist for drift
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: Install skopeo
+        run: sudo apt-get update && sudo apt-get install -y skopeo
+
+      - name: Run drift checks
+        id: check
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Same repo-variable override build.yml uses — the actual pin a
+          # real build resolves to, not just build.sh's hardcoded fallback.
+          PWSH_VERSION: ${{ vars.PWSH_VERSION }}
+          PLASMAZONES_VERSION: ${{ vars.PLASMAZONES_VERSION }}
+        run: |
+          bash .github/scripts/check-drift.sh drift-report.md
+          if [[ -s drift-report.md ]]; then
+            echo "drifted=true" >> "${GITHUB_OUTPUT}"
+          else
+            echo "drifted=false" >> "${GITHUB_OUTPUT}"
+          fi
+
+      - name: File or update the drift issue
+        if: steps.check.outputs.drifted == 'true'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: bash .github/scripts/file-drift-issue.sh drift-report.md

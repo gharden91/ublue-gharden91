@@ -32,6 +32,46 @@ it's supposed to — because the base image changed underneath us. Check these
 periodically, and especially whenever bumping the base image tag or after a
 build starts behaving oddly.
 
+**Five of these are checked for you.** `.github/workflows/drift-check.yml`
+runs weekly (and on demand via `workflow_dispatch`) and files or updates a
+`drift-watch`-labeled issue when it finds: a new PlasmaZones release, a new
+PowerShell release, the pinned PlasmaZones RPM no longer matching the base
+image's KWin, the base Fedora version becoming stale (`stable-44` behind what
+`stable` currently resolves to), or
+[`ublue-os/image-template`](https://github.com/ublue-os/image-template)
+touching a file this repo forked from it and now maintains by hand (see
+ADR-202608042137) — tracked against a baseline commit in
+`.github/template-drift-baseline` that a human advances after reviewing each
+reported range. See
+[ADR-202608222309](decisions/202608222309-scheduled-drift-check-workflow.md)
+for the full "what it watches and why," including why PowerShell is covered
+here as a stopgap even though ADR-0015 assigns it a Renovate PR long-term.
+Everything else below is still a manual check.
+
+**Run it yourself between scheduled runs**, e.g. right after noticing
+upstream moved, or to hand a finding to a reviewer/agent immediately instead
+of waiting for the next Monday:
+
+```bash
+GITHUB_TOKEN=$(gh auth token) bash .github/scripts/check-drift.sh /tmp/drift-report.md
+bash .github/scripts/file-drift-issue.sh /tmp/drift-report.md   # prints the issue URL; no-op if the report is empty
+```
+
+`GITHUB_TOKEN`/`gh` matter here beyond issue-filing auth:
+
+- `PWSH_VERSION` / `PLASMAZONES_VERSION` are GitHub repo variables
+  (Settings > Actions > Variables), which only become env vars automatically
+  inside a workflow run. A local run without a token (or with the env vars
+  unset) falls back to fetching the repo variable directly via the API, and
+  only falls back further to `build.sh`'s literal default if that also
+  fails — so an authenticated `gh` gets you the same real pin CI checks
+  against, not the stale default.
+- The PlasmaZones/KWin-skew check reads the verdict from the most recent
+  successful `build.yml` run's log (`gh run view --log`) rather than pulling
+  the base image itself, so it needs `gh` on `PATH` and authenticated with
+  read access to this repo's Actions runs — the same `gh` you already used
+  for `GITHUB_TOKEN` above.
+
 **Why `stable-44` and not the floating `stable` tag:** `bazzite-dx:stable`
 tracks whatever Fedora release Bazzite currently ships, and jumps to the next
 major version whenever upstream cuts over. PlasmaZones release assets are
@@ -70,9 +110,11 @@ this list is just the "what could rot" summary in one place.
 
 ### Bumping the Fedora version
 
-The `Containerfile`'s `FROM` line is pinned to `ghcr.io/ublue-os/bazzite-dx:stable-44`
-specifically so it and the PlasmaZones COPR stay on the same Fedora release.
-Before moving to `stable-45` (or later):
+The `Containerfile`'s `FROM` line is pinned to
+`ghcr.io/ublue-os/bazzite-dx:stable-${BAZZITE_VERSION}`, where
+`BAZZITE_VERSION` is a build arg defaulting to `44` — specifically so it and
+the PlasmaZones COPR stay on the same Fedora release. Before moving the
+default to `45` (or later):
 
 1. Confirm the pinned PlasmaZones release has an RPM asset for the target
    Fedora version on the
@@ -94,11 +136,22 @@ Before moving to `stable-45` (or later):
    ```bash
    grep VERSION_ID= /etc/os-release; uname -m
    ```
-3. Bump the `FROM` tag in the `Containerfile` and rebuild locally
+3. Test-build against the candidate **before** touching the file, via the
+   `BAZZITE_VERSION` build-arg override:
+
+   ```bash
+   BAZZITE_VERSION=45 just build
+   ```
+
    (see [local-testing.md](./local-testing.md)) to confirm `plasmazones` still
-   installs and `pwsh` still runs.
-4. Only merge the bump once all checks pass — don't let the base image and
-   the COPR drift to different Fedora versions.
+   installs and `pwsh` still runs. This is a local override only — CI never
+   sets `BAZZITE_VERSION` (see
+   [ADR-202608222345](decisions/202608222345-bazzite-version-buildarg-no-repo-variable.md));
+   the daily scheduled build always uses whatever's in the file.
+4. Once the test build passes, bump the `ARG BAZZITE_VERSION=44` default in
+   `Containerfile` itself and open a PR. Only merge the bump once all checks
+   pass — don't let the base image and the COPR drift to different Fedora
+   versions.
 
 ### PowerShell 7 (see [powershell.md](./powershell.md))
 
