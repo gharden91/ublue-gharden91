@@ -94,6 +94,61 @@ podman run --rm -it -e HOME=/tmp ublue-gharden91:latest bash
 > container-run artifact only — on a real booted system the path exists and
 > `pwsh` starts normally.
 
+## Rechunk the image (optional)
+
+```bash
+just ostree-rechunk
+```
+
+Splits the built image into content-addressed layers for smaller delta
+updates on real machines — the same step CI runs on every build/PR. It's
+rootless now (no `sudo` needed to run it yourself, unlike CI's old wrapper —
+see `docs/provenance.md`).
+
+**Skip this for almost all local testing.** Rechunking only repackages the
+image's *layers*; it doesn't touch file content, so a plain `just build`
+followed by the container tests above or a VM boot (below) exercises the
+exact same rootfs a rechunked image would. Building `-qcow2`/`-raw`/`-iso`
+doesn't require a rechunked image either — `bootc-image-builder` works from
+whatever's tagged `localhost/ublue-gharden91:latest` regardless. It also
+isn't free: on CI hardware the rootless rechunk step alone runs ~16 minutes
+(down from ~30 rootful, see PR #48) on top of the build; expect a similar
+order of magnitude locally.
+
+**Do run it locally** when you're specifically changing the `ostree-rechunk`
+(or `rechunk`, the chunkah-based alternative — dormant, not wired into CI)
+recipe itself, or the CI wiring around it in `build.yml`. Two things worth
+checking after a local rechunk in that case:
+
+```bash
+just build
+just ostree-rechunk
+```
+
+- It completes without needing `sudo` — if it asks for root, something
+  regressed the rootless path (`docs/decisions/` has the rationale if this
+  needs revisiting).
+- The base-provenance labels survived. `compose build-chunked-oci`'s
+  rootless `--rootfs` mode has no OCI image config to read at all — a
+  mounted rootfs is just files, so it can't carry a source image's labels
+  through the way the old `--from`-based recipe did (see PR #48's fix
+  commit for the full story: rpm-ostree's label-propagation fix is
+  `--from`-only, and the rootless rewrite needed an explicit `--label`
+  round-trip added back in to still preserve them). Check on the local
+  image, no boot required:
+
+  ```bash
+  podman image inspect ublue-gharden91:latest --format '{{ json .Config.Labels }}' \
+    | jq 'with_entries(select(.key|test("base|image.version")))'
+  ```
+
+  Expect all three: `org.opencontainers.image.base.name`,
+  `org.opencontainers.image.base.digest`, and
+  `org.ublue-gharden91.base-image.version`. Drop the `select` to see the
+  full label set (`docs/provenance.md` has more on what each one means and
+  how to check a *booted* system instead of a local image via
+  `rpm-ostree status --json`).
+
 ## Build a bootable disk image (optional)
 
 The container test above is enough to verify software installs. To actually
@@ -104,6 +159,16 @@ just build-qcow2   # VM disk image
 just build-iso     # installer ISO
 just build-raw     # raw disk image
 ```
+
+> **For local iteration, prefer `build-raw` over `build-qcow2`.** Both run the
+> same `bootc-image-builder` pipeline; `build-qcow2` adds a `qemu-img convert
+> -c` compression pass afterward, which is usually the single biggest chunk of
+> wall-clock time for a disk this size (`minsize = 20 GiB` in
+> `disk_config/disk.toml`) — skipping it is what actually makes local testing
+> fast. Trade-off: `output/raw/disk.raw` is the disk's full uncompressed size
+> on disk instead of qcow2's compressed size, so it eats more local space
+> while you iterate (see "Clean up local build artifacts" below). Reach for
+> `build-qcow2` only when you specifically need the compact file.
 
 ## Boot the image in a VM
 
@@ -127,6 +192,24 @@ Notes:
 - It boots `localhost/ublue-gharden91:latest`, i.e. whichever branch you built
   last. To test features from multiple branches together, merge them first, then
   rebuild.
+
+### Boot the raw image instead — the fast path
+
+```bash
+just run-vm-raw
+```
+
+Same `_run-vm` recipe as `run-vm-qcow2` and every note above applies
+unchanged (web VNC, hardcoded specs, ephemeral, boots whatever you built
+last) — it's just pointed at `output/raw/disk.raw` instead of
+`output/qcow2/disk.qcow2`, and builds that with `build-raw` first if it's
+missing. There's no `run-vm`-style short alias for it, so type the full name.
+This is the pairing to reach for while iterating: `just run-vm-raw` alone
+builds (skipping the qcow2 compression pass) and boots in one command.
+
+The Alpine-boot bug below is specific to `bootc-image-builder`'s *compressed*
+qcow2s, so it doesn't apply to raw images — moot in practice either way,
+since `_run-vm` pins the same known-good runner tag for every image type.
 
 ### If the VM boots Alpine instead of the image
 
@@ -191,10 +274,13 @@ A successful `just build` ends with `bootc container lint` passing and prints
 
 ## Clean up local build artifacts
 
-Disk-image builds are big — each qcow2 is ~7–8 GB — and they accumulate fast.
-Two things pile up in the repo root:
+Disk-image builds are big — each qcow2 is ~7–8 GB, and a raw image runs
+larger still (`output/raw/disk.raw` is uncompressed, closer to the
+`minsize = 20 GiB` filesystem itself) — and they accumulate fast. Two things
+pile up in the repo root:
 
-- `output/` — the finished disk images (`output/qcow2/disk.qcow2`).
+- `output/` — the finished disk images (`output/qcow2/disk.qcow2`,
+  `output/raw/disk.raw`).
 - `_build-bib.*` — temp dirs `bootc-image-builder` creates. Normally moved into
   `output/` and removed at the end of a build, but an **interrupted or failed
   build leaves them behind**, each holding a full-size disk image.
