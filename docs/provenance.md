@@ -152,13 +152,17 @@ readily as any other alias — but it means you can look at GHCR's tag list and
 read off which Bazzite version the most recent build sits on, no inspect
 required.
 
-Because this reads the label with `podman image inspect`, and Build
-Image/Rechunk both run rootful (`sudo -E just ...`), the CI step that calls
-`generate-build-tags` has to run rootful too — an unprivileged `podman
-image inspect` can't see into root's storage and fails with `image not
-known`. Same root-owned-storage trap as `just sudo-clean` in
-[`docs/local-testing.md`](local-testing.md), just hitting a CI step instead
-of a local temp dir.
+This reads the label with `podman image inspect`. `just build` and
+`just ostree-rechunk` are rootless now (#45 ported the upstream rewrite that
+dropped `ostree-rechunk`'s root requirement — it mounts the already-built
+image directly with `--mount=type=image` instead of bind-mounting root's
+`/var/lib/containers`), so `generate-build-tags` reads back the label from
+the same unprivileged podman storage both steps already wrote to. Before
+#45, Build Image/Rechunk ran rootful (`sudo -E just ...`), so
+`generate-build-tags` had to run rootful too — an unprivileged `podman image
+inspect` couldn't see into root's storage and failed with `image not known`.
+That's gone: `.github/workflows/build.yml` no longer wraps any of the
+build/rechunk/tag/push steps in `sudo`.
 
 ## Why the base isn't just pinned instead
 
