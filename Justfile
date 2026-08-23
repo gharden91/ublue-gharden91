@@ -226,6 +226,25 @@ ostree-rechunk $target_image=image_name $tag=default_tag:
 
     GRAPHROOT="$(podman info --format '{{ '{{.Store.GraphRoot}}' }}')"
 
+    # --rootfs mode has no OCI image config to read at all (a mounted rootfs
+    # is just files; labels live in image config, not on disk), so it can't
+    # carry the source image's labels through the way --from mode does
+    # (coreos/rpm-ostree#5343's label-propagation fix is --from-only, gated
+    # in rpm-ostree's own source on `self.from.is_some()`). Recover them
+    # explicitly and re-supply with --label (coreos/rpm-ostree#5454), which
+    # this needs to actually preserve org.opencontainers.image.base.* and
+    # friends (docs/provenance.md) through the rechunk. Drop rpm-ostree's own
+    # auto-generated labels — compose build-chunked-oci sets fresh ones for
+    # those regardless of what's passed in.
+    LABEL_ARGS=()
+    while IFS=$'\t' read -r key value; do
+      LABEL_ARGS+=("--label" "${key}=${value}")
+    done < <(podman image inspect "${target_image}:${tag}" --format '{{ '{{ json .Config.Labels }}' }}' \
+      | jq -r 'to_entries[]
+               | select(.key != "containers.bootc")
+               | select(.key | startswith("ostree.") | not)
+               | "\(.key)\t\(.value)"')
+
     podman run --rm --pull=never --privileged \
       --mount=type=image,src="${target_image}:${tag}",target=/rpm-ostree \
       --mount=type=bind,src=${GRAPHROOT},target=/run/host-container-storage,rw \
@@ -237,6 +256,7 @@ ostree-rechunk $target_image=image_name $tag=default_tag:
       --format-version=2 \
       --bootc \
       --rootfs /rpm-ostree \
+      "${LABEL_ARGS[@]}" \
       --output "containers-storage:[overlay@/run/host-container-storage+/run/rpm-ostree-storage]localhost/${target_image}:${tag}"
 
 # Generate Default Tag
