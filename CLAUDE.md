@@ -64,6 +64,7 @@ Depth pages, each edited in place:
 - [`docs/discord.md`](docs/discord.md) — Discord official RPM, deliberately unpinned.
 - [`docs/vlc.md`](docs/vlc.md) — VLC from negativo17 fedora-multimedia, not RPM Fusion.
 - [`docs/fonts.md`](docs/fonts.md) — color-emoji tofu: resolved; it was a stale per-user font cache.
+- [`docs/template-drift-log.md`](docs/template-drift-log.md) — every upstream `ublue-os/image-template` commit reviewed for drift: what it did, ported or skipped, and why. **Append a row for every commit in a reviewed drift range before advancing `.github/template-drift-baseline`** — a reviewed range with no log row is indistinguishable from one nobody looked at.
 - [`docs/README.md`](docs/README.md) — docs index + the **Maintenance Watchlist** of what can rot silently.
 
 **Before proposing a substrate, a packaging approach, a repo/COPR, or a rewrite —
