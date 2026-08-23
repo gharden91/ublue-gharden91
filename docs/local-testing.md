@@ -128,12 +128,26 @@ just ostree-rechunk
 - It completes without needing `sudo` — if it asks for root, something
   regressed the rootless path (`docs/decisions/` has the rationale if this
   needs revisiting).
-- The base-provenance labels survived — see `docs/provenance.md`'s "Caveats"
-  section for the `podman image inspect`/`rpm-ostree status --json` commands
-  to check `org.opencontainers.image.base.name`,
-  `.base.digest`, and `org.ublue-gharden91.base-image.version` are all still
-  present on the rechunked image (or on a VM booted from it, per the
-  "Boot the image in a VM" section below).
+- The base-provenance labels survived. `compose build-chunked-oci`'s
+  rootless `--rootfs` mode has no OCI image config to read at all — a
+  mounted rootfs is just files, so it can't carry a source image's labels
+  through the way the old `--from`-based recipe did (see PR #48's fix
+  commit for the full story: rpm-ostree's label-propagation fix is
+  `--from`-only, and the rootless rewrite needed an explicit `--label`
+  round-trip added back in to still preserve them). Check on the local
+  image, no boot required:
+
+  ```bash
+  podman image inspect ublue-gharden91:latest --format '{{ json .Config.Labels }}' \
+    | jq 'with_entries(select(.key|test("base|image.version")))'
+  ```
+
+  Expect all three: `org.opencontainers.image.base.name`,
+  `org.opencontainers.image.base.digest`, and
+  `org.ublue-gharden91.base-image.version`. Drop the `select` to see the
+  full label set (`docs/provenance.md` has more on what each one means and
+  how to check a *booted* system instead of a local image via
+  `rpm-ostree status --json`).
 
 ## Build a bootable disk image (optional)
 
