@@ -94,6 +94,47 @@ podman run --rm -it -e HOME=/tmp ublue-gharden91:latest bash
 > container-run artifact only — on a real booted system the path exists and
 > `pwsh` starts normally.
 
+## Rechunk the image (optional)
+
+```bash
+just ostree-rechunk
+```
+
+Splits the built image into content-addressed layers for smaller delta
+updates on real machines — the same step CI runs on every build/PR. It's
+rootless now (no `sudo` needed to run it yourself, unlike CI's old wrapper —
+see `docs/provenance.md`).
+
+**Skip this for almost all local testing.** Rechunking only repackages the
+image's *layers*; it doesn't touch file content, so a plain `just build`
+followed by the container tests above or a VM boot (below) exercises the
+exact same rootfs a rechunked image would. Building `-qcow2`/`-raw`/`-iso`
+doesn't require a rechunked image either — `bootc-image-builder` works from
+whatever's tagged `localhost/ublue-gharden91:latest` regardless. It also
+isn't free: on CI hardware the rootless rechunk step alone runs ~16 minutes
+(down from ~30 rootful, see PR #48) on top of the build; expect a similar
+order of magnitude locally.
+
+**Do run it locally** when you're specifically changing the `ostree-rechunk`
+(or `rechunk`, the chunkah-based alternative — dormant, not wired into CI)
+recipe itself, or the CI wiring around it in `build.yml`. Two things worth
+checking after a local rechunk in that case:
+
+```bash
+just build
+just ostree-rechunk
+```
+
+- It completes without needing `sudo` — if it asks for root, something
+  regressed the rootless path (`docs/decisions/` has the rationale if this
+  needs revisiting).
+- The base-provenance labels survived — see `docs/provenance.md`'s "Caveats"
+  section for the `podman image inspect`/`rpm-ostree status --json` commands
+  to check `org.opencontainers.image.base.name`,
+  `.base.digest`, and `org.ublue-gharden91.base-image.version` are all still
+  present on the rechunked image (or on a VM booted from it, per the
+  "Boot the image in a VM" section below).
+
 ## Build a bootable disk image (optional)
 
 The container test above is enough to verify software installs. To actually
