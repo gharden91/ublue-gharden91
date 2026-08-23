@@ -140,82 +140,71 @@ check_fedora_currency() {
     return 1
 }
 
-# Whether the pinned PlasmaZones release still matches the base image's KWin.
-# Mirrors the skew check build_files/build.sh runs at image build time, but
-# against the base image directly instead of a built image.
+# Whether the pinned PlasmaZones release still matches the base image's
+# KWin. build_files/build.sh already computes and logs this exact verdict at
+# image build time ("PlasmaZones skew check: ..." plus either a "matches"
+# line or a "WARNING: ... is not built against ..." line) — so read that
+# instead of re-deriving it here. Re-deriving would mean pulling the
+# multi-GB base image ourselves and re-running the same rpm/RPM-extraction
+# build.sh already did, which is both slower and only as fresh as this
+# runner's local podman cache (a prior version of this check had exactly
+# that bug: podman run's default "pull only if missing" policy meant it
+# could silently check a stale cached base image forever). Reading the
+# actual last build's own log is both cheaper and a truer signal — it's the
+# base image a real build resolved, not "whatever stable-<NN> resolves to
+# right now". Requires the `gh` CLI, authenticated with read access to this
+# repo's Actions runs (already true for the workflow's own token; locally,
+# `gh auth token` from an authenticated `gh` works the same way the other
+# checks use it).
 check_kwin_skew() {
-    local pinned fedora_release kwin_version tmpdir rpm_url plugin_so
-    local kwin_mm kwin_re plugin_vers v matched base_image
+    local run_id log_lines kwin_version pinned plugin_vers
 
-    pinned="$(pinned_version PLASMAZONES_VERSION)"
-    if [[ -z "${pinned}" ]]; then
-        log "KWin skew: could not read PLASMAZONES_VERSION, skipping"
+    if ! command -v gh >/dev/null 2>&1; then
+        log "KWin skew: gh CLI not found, skipping"
         return 0
     fi
 
-    # Same base image the real build resolves (ADR-202608222345): the
-    # Containerfile's ARG default, since this check has no override for it.
-    base_image="ghcr.io/ublue-os/bazzite-dx:stable-$(containerfile_arg BAZZITE_VERSION)"
-    # `podman run`'s default pull policy is "missing" — it only pulls a tag
-    # that isn't already cached locally. Since stable-<NN> floats (moves
-    # roughly daily), any prior local pull of it (an earlier run of this
-    # script, a `just build`, anything) would otherwise make every run here
-    # silently check a stale cached image forever. Justfile's own `just
-    # build` avoids this with an explicit `podman pull` before inspecting;
-    # do the same here so this check age or someone else's local cache can't
-    # produce a false "KWin skew" against a base that's already moved on.
-    if ! podman pull --quiet "${base_image}" >/dev/null 2>&1; then
-        log "KWin skew: could not pull ${base_image}, skipping"
-        return 0
-    fi
-    kwin_version="$(podman run --rm "${base_image}" \
-        rpm -q --whatprovides --qf '%{VERSION}\n' kwin 2>/dev/null | head -n1)" || kwin_version=""
-    fedora_release="$(podman run --rm "${base_image}" rpm -E %fedora 2>/dev/null)" || fedora_release=""
-    if [[ -z "${kwin_version}" || -z "${fedora_release}" ]]; then
-        log "KWin skew: could not read the base image's KWin/Fedora version, skipping"
+    run_id="$(gh run list --repo "${GH_REPO}" --workflow build.yml --branch main \
+        --status success --limit 1 --json databaseId --jq '.[0].databaseId // empty' 2>/dev/null)"
+    if [[ -z "${run_id}" ]]; then
+        log "KWin skew: no recent successful build.yml run found, skipping"
         return 0
     fi
 
-    tmpdir="$(mktemp -d)"
-    # shellcheck disable=SC2064  # intentional early expansion of $tmpdir
-    trap "rm -rf '${tmpdir}'" RETURN
-
-    rpm_url="https://github.com/fuddlesworth/PlasmaZones/releases/download/v${pinned}/plasmazones-${pinned}-1.fc${fedora_release}.x86_64.rpm"
-    if ! curl -fsSL -o "${tmpdir}/plasmazones.rpm" "${rpm_url}"; then
-        log "KWin skew: no PlasmaZones ${pinned} RPM for Fedora ${fedora_release} (${rpm_url}), skipping"
-        return 0
-    fi
-    (cd "${tmpdir}" && rpm2cpio plasmazones.rpm | cpio -idm --quiet)
-    plugin_so="$(find "${tmpdir}" -path '*/kwin/*.so' -print -quit)"
-    if [[ -z "${plugin_so}" ]]; then
-        log "KWin skew: no kwin effect plugin found in the RPM, skipping"
+    log_lines="$(gh run view "${run_id}" --repo "${GH_REPO}" --log 2>/dev/null | grep -F 'PlasmaZones')" || log_lines=""
+    if [[ -z "${log_lines}" ]]; then
+        log "KWin skew: couldn't find the skew-check lines in run ${run_id}'s log, skipping"
         return 0
     fi
 
-    # Same X.Y-series regex build_files/build.sh uses, so the diagnostic
-    # ignores unrelated Qt/KF version strings embedded in the binary.
-    kwin_mm="${kwin_version%.*}"
-    kwin_re="${kwin_mm%.*}[.]${kwin_mm#*.}[.][0-9]+"
-    plugin_vers="$(grep -aEo "${kwin_re}" "${plugin_so}" | sort -u | paste -sd' ' -)" || plugin_vers=""
-    log "KWin skew: image KWin=${kwin_version}; plugin embeds ${kwin_mm}.x=[${plugin_vers:-none}]"
+    if grep -qE 'PlasmaZones effect plugin matches image KWin [0-9.]+ — zones will load\.' <<<"${log_lines}"; then
+        kwin_version="$(grep -oP 'matches image KWin \K[0-9.]+' <<<"${log_lines}" | head -n1)"
+        log "KWin skew (build.yml run ${run_id}): image KWin=${kwin_version:-?} matches, zones load"
+        return 0
+    fi
 
-    matched=0
-    read -ra plugin_vers_arr <<<"${plugin_vers}"
-    for v in "${plugin_vers_arr[@]:-}"; do
-        [[ "${v}" == "${kwin_version}" ]] && matched=1
-    done
-    [[ "${matched}" -eq 1 ]] && return 0
+    if grep -qE 'WARNING: PlasmaZones [0-9.]+ is not built against' <<<"${log_lines}"; then
+        pinned="$(grep -oP 'WARNING: PlasmaZones \K[0-9.]+' <<<"${log_lines}" | head -n1)"
+        kwin_version="$(grep -oP "this image's KWin \K[0-9.]+" <<<"${log_lines}" | head -n1)"
+        plugin_vers="$(grep -oP 'embeds \[\K[^]]*' <<<"${log_lines}" | head -n1)"
+        log "KWin skew (build.yml run ${run_id}): image KWin=${kwin_version:-?}; PlasmaZones ${pinned:-?} embeds=[${plugin_vers:-?}]"
 
-    {
-        echo "### PlasmaZones / KWin version skew"
-        echo
-        echo "The base image's KWin is \`${kwin_version}\`, but the pinned PlasmaZones"
-        echo "\`${pinned}\` effect plugin embeds \`${plugin_vers:-no matching version}\`."
-        echo "The effect stays inert (zones won't snap) until a matching PlasmaZones"
-        echo "release is pinned. See [docs/plasmazones.md](${REPO_URL}/docs/plasmazones.md)."
-        echo
-    } >>"${REPORT}"
-    return 1
+        {
+            echo "### PlasmaZones / KWin version skew"
+            echo
+            echo "The most recent successful build"
+            echo "([run #${run_id}](https://github.com/${GH_REPO}/actions/runs/${run_id})) logged a"
+            echo "mismatch: base image KWin \`${kwin_version:-unknown}\`, pinned PlasmaZones"
+            echo "\`${pinned:-unknown}\` effect plugin embeds \`${plugin_vers:-no matching version}\`."
+            echo "The effect stays inert (zones won't snap) until a matching PlasmaZones"
+            echo "release is pinned. See [docs/plasmazones.md](${REPO_URL}/docs/plasmazones.md)."
+            echo
+        } >>"${REPORT}"
+        return 1
+    fi
+
+    log "KWin skew: found PlasmaZones log lines but neither known pattern matched, skipping"
+    return 0
 }
 
 # Whether ublue-os/image-template has touched, since our recorded baseline,

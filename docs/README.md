@@ -57,13 +57,20 @@ GITHUB_TOKEN=$(gh auth token) bash .github/scripts/check-drift.sh /tmp/drift-rep
 bash .github/scripts/file-drift-issue.sh /tmp/drift-report.md   # prints the issue URL; no-op if the report is empty
 ```
 
-`GITHUB_TOKEN` matters here beyond issue-filing auth: `PWSH_VERSION` /
-`PLASMAZONES_VERSION` are GitHub repo variables (Settings > Actions >
-Variables), which only become env vars automatically inside a workflow run.
-A local run without a token (or with the env vars unset) falls back to
-fetching the repo variable directly via the API, and only falls back further
-to `build.sh`'s literal default if that also fails — so an authenticated
-`gh` gets you the same real pin CI checks against, not the stale default.
+`GITHUB_TOKEN`/`gh` matter here beyond issue-filing auth:
+
+- `PWSH_VERSION` / `PLASMAZONES_VERSION` are GitHub repo variables
+  (Settings > Actions > Variables), which only become env vars automatically
+  inside a workflow run. A local run without a token (or with the env vars
+  unset) falls back to fetching the repo variable directly via the API, and
+  only falls back further to `build.sh`'s literal default if that also
+  fails — so an authenticated `gh` gets you the same real pin CI checks
+  against, not the stale default.
+- The PlasmaZones/KWin-skew check reads the verdict from the most recent
+  successful `build.yml` run's log (`gh run view --log`) rather than pulling
+  the base image itself, so it needs `gh` on `PATH` and authenticated with
+  read access to this repo's Actions runs — the same `gh` you already used
+  for `GITHUB_TOKEN` above.
 
 **Why `stable-44` and not the floating `stable` tag:** `bazzite-dx:stable`
 tracks whatever Fedora release Bazzite currently ships, and jumps to the next

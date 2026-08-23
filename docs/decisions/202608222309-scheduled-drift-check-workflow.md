@@ -22,11 +22,15 @@ items:
 
 - **PlasmaZones** — pinned `PLASMAZONES_VERSION` vs. the latest GitHub release.
 - **PowerShell** — pinned `PWSH_VERSION` vs. the latest GitHub release.
-- **PlasmaZones/KWin skew** — pulls the pinned base image and the pinned
-  PlasmaZones RPM directly (no full `just build`) and runs the same
-  X.Y-series regex comparison `build_files/build.sh` already does at build
-  time, so the warning that currently only shows up in a build log surfaces
-  as an issue instead.
+- **PlasmaZones/KWin skew** — reads the verdict `build_files/build.sh`
+  already computed and logged in the most recent successful `build.yml` run
+  (via `gh run view --log`), so the warning that currently only shows up in
+  a build log surfaces as an issue instead. An earlier version of this check
+  pulled the base image and the pinned PlasmaZones RPM itself and re-ran the
+  same comparison independently; reading the actual last build's own log
+  instead is both cheaper (no multi-GB image pull) and a truer signal (the
+  base image a real build resolved, not "whatever `stable-<NN>` resolves to
+  right now") — see *What we turned down*.
 - **Base Fedora currency** — compares the `Containerfile`'s pinned
   `stable-<NN>` major against what the floating `stable` tag currently
   resolves to (via `skopeo inspect`), i.e. whether a `stable-45` bump is due.
@@ -77,7 +81,8 @@ run nobody reads isn't drift detection, it's a check nobody sees.
 | Leave `PWSH_VERSION` out until Renovate is built | Would mean months of zero drift signal on a pin ADR-0015 itself calls "high value (used daily)" while the Renovate manager sits unbuilt. Watching it here now, and dropping it once Renovate lands, costs one extra `check_pinned_version` call. |
 | Diff our tree against the template's tree (content diff, not commit range) | ADR-202608042137 already found this destructive for merging and near-permanently noisy for reading: unrelated histories, and files like `Containerfile` where "ours is heavily customized; expect big diffs" every single time. A commit-range check on the template's own history avoids both problems. |
 | Auto-advance the baseline after every report | Would silently stop reporting a range nobody actually reviewed — the same failure mode the whole issue exists to prevent, just moved one level down. The baseline only moves when a human bumps it, mirroring how `PLASMAZONES_VERSION` only moves when a human bumps it. |
-| Run the KWin-skew check via a full `just build` | The whole point is catching skew *before* a build, and a full build is the expensive path the watchlist explicitly says a `WARNING` already exists inside. Pulling the base image + the RPM directly and re-running the same comparison is materially cheaper and needs no image push. |
+| Run the KWin-skew check via a full `just build` | The whole point is catching skew without paying for a build, and a full build is the expensive path the watchlist explicitly says a `WARNING` already exists inside. |
+| Re-derive the KWin skew ourselves: pull the base image + the PlasmaZones RPM directly and re-run build.sh's comparison | Tried first; dropped after it produced a false report. `podman run`'s default pull policy only pulls a tag if it's not already cached locally, so once *any* prior local pull of the floating `stable-<NN>` tag existed (an earlier run of this check, a `just build`, anything), every subsequent run silently kept reading that stale cached image's KWin version instead of the current one. Reading the last real build's own already-computed log line instead has no cache to go stale, is cheaper (a log fetch vs. a multi-GB image pull), and reflects the base a real build actually used rather than "whatever the tag resolves to at the moment this check happens to run." |
 | Fail the Actions job on drift | Drift isn't a bug in this commit — failing a schedule-triggered run just produces a red workflow nobody is looking at. An issue is the correct-shaped signal; the script always exits 0. |
 
 ## What would change our mind
@@ -97,6 +102,15 @@ run nobody reads isn't drift detection, it's a check nobody sees.
   restructures into files outside the watched-path list), extend
   `watched_paths` in `check_template_drift` — same fix as the file-by-file
   table on #19 already anticipates needing updates over time.
+- **If `build_files/build.sh`'s skew-check log lines ever change wording**
+  (the "matches image KWin ... — zones will load." / "WARNING: PlasmaZones
+  ... is not built against ..." pair `check_kwin_skew` greps for), update the
+  patterns together — they're deliberately kept as one comparison in one
+  place, not duplicated logic that could drift apart.
+- **If `build.yml` stops having a recent successful run** (a long outage,
+  every run failing before the skew-check step), `check_kwin_skew` has
+  nothing to read and silently skips — acceptable since a broken build
+  pipeline is a bigger problem this watcher doesn't need to also report.
 - **If `.github/template-drift-baseline` goes stale** (nobody bumps it after
   reviewing a reported range, so the same commits keep re-reporting for
   months) — that's a signal the review step itself needs a nudge (e.g. an

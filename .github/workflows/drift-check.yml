@@ -8,6 +8,11 @@ on:
 permissions:
   contents: read
   issues: write
+  # check_kwin_skew() reads the most recent successful build.yml run's log
+  # via `gh run view --log` rather than re-deriving the base image's KWin
+  # itself (see .github/scripts/check-drift.sh) — that needs read access to
+  # this repo's own Actions runs.
+  actions: read
 
 jobs:
   check-drift:
@@ -18,7 +23,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: Install skopeo
-        run: sudo apt-get update && sudo apt-get install -y skopeo rpm
+        run: sudo apt-get update && sudo apt-get install -y skopeo
 
       - name: Run drift checks
         id: check
