@@ -3,7 +3,7 @@
 - **Status:** Accepted
 - **Date:** 2026-08-23
 - **Scope:** repo
-- **Shipped in:** #43, #45, #47, PR #46 (baseline advance, trivial cleanups, and the drift-script commit-listing enhancement below); #36/PR #41 (cosign, already in flight before this review)
+- **Shipped in:** #43, #45 (merged via PR #48), #47 (merged via PR #48), PR #46 (baseline advance, trivial cleanups, and the drift-script commit-listing enhancement below); #36 (merged via PR #41)
 
 ## The question
 
@@ -47,23 +47,38 @@ matters for a port decision.
 | Commit(s) | Decision | Reasoning | Reference |
 |---|---|---|---|
 | `57faa3ae` | **Port** (already ported, in this same PR) | Zero-behavior-change portability fix — shebang style and `$PATH`-resolved binaries instead of hardcoded `/usr/bin/*`. No reason not to take it; applied directly in PR #46 rather than filing an issue for something this small (ADR-0016's "something genuinely small can ride along" exception). The README section it added isn't ours to take — see `dcafc268`'s row. | PR #46 |
-| `b6ae7043` | **Port** | The one already-flagged substantive change (ADR-202608042137 called it out by name). Directly needed: rpm-ostree/bootc can't verify cosign 3.x's new default bundle format, so the flags are load-bearing, not cosmetic. | Issue #36, open as PR #41 |
-| `715d4b2d` + `94e9423c` | **Port** (as one unit — the final shape, not the intermediate `SOURCE_DATE_EPOCH` detour) | Real robustness fix (avoids the exact env-var-overflow class of bug that hit `bluefin`), but the recipe it touches (`rechunk`, the chunkah path) is dormant here — `build.yml` only ever calls `ostree-rechunk`; the chunkah invocation is commented out. Ported for the record so the drift baseline can move past it, not because anything currently depends on it. | Issue #47 |
+| `b6ae7043` | **Port** | The one already-flagged substantive change (ADR-202608042137 called it out by name). Directly needed: rpm-ostree/bootc can't verify cosign 3.x's new default bundle format, so the flags are load-bearing, not cosmetic. | Issue #36, merged via PR #41 |
+| `715d4b2d` + `94e9423c` | **Port** (as one unit — the final shape, not the intermediate `SOURCE_DATE_EPOCH` detour) | Real robustness fix (avoids the exact env-var-overflow class of bug that hit `bluefin`), but the recipe it touches (`rechunk`, the chunkah path) is dormant here — `build.yml` only ever calls `ostree-rechunk`; the chunkah invocation is commented out. Ported for the record so the drift baseline can move past it, not because anything currently depends on it. | Issue #47, merged via PR #48 |
 | `ac6ef404` | **Skip** | Pure action-digest bump. Renovate manages `docker/login-action` here directly from upstream, and we're already ahead of the template on it (`v4.6.0` vs. the template's `v4.5.1` at this point in its history) — exactly the case ADR-202608042137 already reasoned through. | ADR-202608042137, finding 3 |
-| `a18ae9b5` + `3430fb69` + `b9783f6a` | **Port** (final shape — mount-based, containers-storage output, no root requirement) | `ostree-rechunk` is the recipe our CI actually calls every build. The root requirement it drops is the exact `# TODO: This is the only blocker for rootless CI` comment already sitting in our own copy of the recipe — this is upstream fixing the thing we were already waiting on. Genuinely behavioral (not a version bump) and touches the load-bearing recipe, so it gets its own issue with a real build+boot verification rather than landing speculatively. | Issue #45 |
+| `a18ae9b5` + `3430fb69` + `b9783f6a` | **Port** (final shape — mount-based, containers-storage output, no root requirement) | `ostree-rechunk` is the recipe our CI actually calls every build. The root requirement it drops is the exact `# TODO: This is the only blocker for rootless CI` comment already sitting in our own copy of the recipe — this is upstream fixing the thing we were already waiting on. Genuinely behavioral (not a version bump) and touches the load-bearing recipe, so it gets its own issue with a real build+boot verification rather than landing speculatively. | Issue #45, merged via PR #48 |
 | `dcafc268` | **Skip** | Our `README.md` doesn't carry the "Requirements" section this typo lives in — content has already diverged enough that the fix has nothing to apply to. | n/a |
 
-One nuance worth recording: `3430fb69`'s `build.yml` change — dropping
-`sudo -E $(command -v just) …` from the `build`, `ostree-rechunk`, and
-`tag-images` steps, and `sudo -E` from the `podman push` step — is a
-consequence of `ostree-rechunk` no longer needing root. **Porting #45 alone
-does not let us drop all of our `sudo` wrapping.** Our `generate-build-tags`
-step is *also* sudo-wrapped, for an unrelated reason recorded in the `#39`
-comment already in our `build.yml` (it inspects the built image, which needs
-root visibility into podman's storage) — a problem the template's rewrite
-doesn't touch at all, since the template never sudo-wraps that step in the
-first place. Whoever picks up #45 should re-derive which steps can actually
-drop `sudo` on our own CI, not copy the template's `build.yml` diff verbatim.
+One nuance recorded at review time, since resolved: `3430fb69`'s `build.yml`
+change drops `sudo -E $(command -v just) …` from the `build`, `ostree-rechunk`,
+and `tag-images` steps as a consequence of `ostree-rechunk` no longer needing
+root, but the template never sudo-wrapped `generate-build-tags` in the first
+place — that step was sudo-wrapped on *our* side only, for the unrelated `#39`
+reason (it inspects the built image, needing root visibility into podman's
+storage). This record originally predicted porting #45 wouldn't be enough to
+drop that step's `sudo` too. **It was wrong** — PR #48 (which shipped #45 and
+#47 together) dropped `sudo` from every step in `build.yml`, including
+`generate-build-tags`, and CI is green. Whatever made `#39` necessary no
+longer applies once the whole pipeline (build → rechunk → tag → push) runs
+unprivileged rather than mixing sudo and non-sudo steps — worth a closer look
+if `#39`'s root cause matters again later, but not blocking here. Per this
+record's own "what would change our mind," the correction is made here rather
+than silently in PR #48.
+
+A related bonus finding from actually verifying #45 on real hardware rather
+than trusting a green build (exactly the tier ADR-202608230207's table called
+for): the rootless rewrite's switch to `--rootfs` mode silently dropped every
+custom OCI label — not just the three base-provenance ones #33/#45 cared
+about, all of them — because rpm-ostree's label-propagation only reads
+`Config.Labels` in `--from` mode. See
+[ADR-202608230454](202608230454-preserve-labels-through-rootless-rechunk.md)
+for the fix (re-supply labels explicitly via `--label`). This is the exact
+"a green build doesn't verify this" failure mode ADR-0011 exists for, caught
+only because #45 asked for real verification instead of a build-log check.
 
 ## What we turned down
 
@@ -109,10 +124,6 @@ entries.
 - If a future range shows the same recipe rewritten a third time before we've
   finished porting the second, that's a signal to wait for upstream to settle
   before porting mid-stream — not evidence to abandon hand-review.
-- If `#45`'s rootless `ostree-rechunk` port turns out to also let
-  `generate-build-tags` drop its own `sudo` wrapping (contrary to the "one
-  nuance" note above), update this record's table rather than silently
-  fixing it in the `#45` PR only.
 - If dormant recipes like `rechunk`/chunkah accumulate several more unported
   upstream revisions before ever being called from `build.yml`, that's a
   signal to either commit to switching CI to chunkah or stop tracking its
