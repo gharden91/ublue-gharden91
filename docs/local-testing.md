@@ -105,6 +105,16 @@ just build-iso     # installer ISO
 just build-raw     # raw disk image
 ```
 
+> **For local iteration, prefer `build-raw` over `build-qcow2`.** Both run the
+> same `bootc-image-builder` pipeline; `build-qcow2` adds a `qemu-img convert
+> -c` compression pass afterward, which is usually the single biggest chunk of
+> wall-clock time for a disk this size (`minsize = 20 GiB` in
+> `disk_config/disk.toml`) — skipping it is what actually makes local testing
+> fast. Trade-off: `output/raw/disk.raw` is the disk's full uncompressed size
+> on disk instead of qcow2's compressed size, so it eats more local space
+> while you iterate (see "Clean up local build artifacts" below). Reach for
+> `build-qcow2` only when you specifically need the compact file.
+
 ## Boot the image in a VM
 
 Boot the built qcow2 in an ephemeral QEMU VM:
@@ -127,6 +137,24 @@ Notes:
 - It boots `localhost/ublue-gharden91:latest`, i.e. whichever branch you built
   last. To test features from multiple branches together, merge them first, then
   rebuild.
+
+### Boot the raw image instead — the fast path
+
+```bash
+just run-vm-raw
+```
+
+Same `_run-vm` recipe as `run-vm-qcow2` and every note above applies
+unchanged (web VNC, hardcoded specs, ephemeral, boots whatever you built
+last) — it's just pointed at `output/raw/disk.raw` instead of
+`output/qcow2/disk.qcow2`, and builds that with `build-raw` first if it's
+missing. There's no `run-vm`-style short alias for it, so type the full name.
+This is the pairing to reach for while iterating: `just run-vm-raw` alone
+builds (skipping the qcow2 compression pass) and boots in one command.
+
+The Alpine-boot bug below is specific to `bootc-image-builder`'s *compressed*
+qcow2s, so it doesn't apply to raw images — moot in practice either way,
+since `_run-vm` pins the same known-good runner tag for every image type.
 
 ### If the VM boots Alpine instead of the image
 
@@ -191,10 +219,13 @@ A successful `just build` ends with `bootc container lint` passing and prints
 
 ## Clean up local build artifacts
 
-Disk-image builds are big — each qcow2 is ~7–8 GB — and they accumulate fast.
-Two things pile up in the repo root:
+Disk-image builds are big — each qcow2 is ~7–8 GB, and a raw image runs
+larger still (`output/raw/disk.raw` is uncompressed, closer to the
+`minsize = 20 GiB` filesystem itself) — and they accumulate fast. Two things
+pile up in the repo root:
 
-- `output/` — the finished disk images (`output/qcow2/disk.qcow2`).
+- `output/` — the finished disk images (`output/qcow2/disk.qcow2`,
+  `output/raw/disk.raw`).
 - `_build-bib.*` — temp dirs `bootc-image-builder` creates. Normally moved into
   `output/` and removed at the end of a build, but an **interrupted or failed
   build leaves them behind**, each holding a full-size disk image.
