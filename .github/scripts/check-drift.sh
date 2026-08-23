@@ -226,7 +226,7 @@ check_template_drift() {
         "build_files/build.sh"
         "disk_config"
     )
-    local baseline head_sha tmpdir changed f
+    local baseline head_sha tmpdir changed commits f sha subject
 
     if [[ ! -f "${baseline_file}" ]]; then
         log "Template drift: no ${baseline_file}, skipping"
@@ -267,6 +267,14 @@ check_template_drift() {
     fi
     log "Template drift: watched paths changed: $(tr '\n' ' ' <<<"${changed}")"
 
+    # The individual commits in the range that touched a watched path, oldest
+    # first — this is the unit a review actually reasons about (see the "Doing
+    # the review" section below), not the file list above. A squashed
+    # baseline->head diff hides that several commits are one continuous
+    # rewrite (fix, then a follow-up fixing the fix) versus independent
+    # changes worth judging separately.
+    commits="$(git -C "${tmpdir}" log --reverse --format='%H %s' "${baseline}..${head_sha}" -- "${watched_paths[@]}")" || commits=""
+
     {
         echo "### Template drift (\`ublue-os/image-template\`)"
         echo
@@ -280,12 +288,41 @@ check_template_drift() {
         echo
         echo "Compare: <https://github.com/ublue-os/image-template/compare/${baseline}...${head_sha}>"
         echo
-        echo "Read each hunk for *behavioral* changes (signing, rechunk, build steps) and"
-        echo "port those by hand as their own issue/PR; dependency and action-digest bumps"
-        echo "are already covered by Renovate here and can be ignored — see the"
-        echo "file-by-file table on [#19](https://github.com/gharden91/ublue-gharden91/issues/19)."
-        echo "Once reviewed (ported, or deliberately skipped), update \`${baseline_file}\`"
-        echo "to \`${head_sha}\` so this stops re-reporting the same range."
+        if [[ -n "${commits}" ]]; then
+            echo "Commits touching those paths in this range, oldest first:"
+            echo
+            while IFS=' ' read -r sha subject; do
+                echo "- [\`${sha:0:8}\`](https://github.com/ublue-os/image-template/commit/${sha}) ${subject}"
+            done <<<"${commits}"
+            echo
+        fi
+        echo "#### Doing the review"
+        echo
+        echo "Review this range **commit by commit**, not as one squashed diff — a"
+        echo "multi-commit rewrite (a fix, then a follow-up correcting that fix) needs"
+        echo "judging by its final shape, but an issue per intermediate commit asks a"
+        echo "reviewer to evaluate a state upstream itself abandoned days later. Group"
+        echo "commits into their real units of change first, then per unit:"
+        echo
+        echo "1. Read the commit(s) and message for what changed and why (\`git show <sha>\`"
+        echo "   against a local clone, or the commit URLs above)."
+        echo "2. Decide: **port** (behavioral, applies to us — file its own issue per"
+        echo "   [ADR-0016](${REPO_URL}/docs/decisions/0016-one-idea-per-issue-one-issue-per-pr.md),"
+        echo "   referencing the source commit hash(es)), or **skip** (dependency/action-digest"
+        echo "   bump already covered by Renovate, or a file/section we've diverged from"
+        echo "   entirely) — with the reason either way."
+        echo "3. Write up the per-commit decisions as an "
+        echo "   [ADR](${REPO_URL}/docs/decisions/TEMPLATE.md) — one record for the whole"
+        echo "   range, a table of commit hash / what it did / port-or-skip / why /"
+        echo "   issue-or-PR reference. See"
+        echo "   [ADR-202608230207](${REPO_URL}/docs/decisions/202608230207-review-template-range-aug2026.md)"
+        echo "   for a worked example of this exact process on a prior range."
+        echo "4. Once every commit in the range has a decision (ported, or deliberately"
+        echo "   skipped), update \`${baseline_file}\` to \`${head_sha}\` so this stops"
+        echo "   re-reporting the same range."
+        echo
+        echo "The file-by-file table on [#19](https://github.com/gharden91/ublue-gharden91/issues/19)"
+        echo "has more background on what tends to be safe to skip."
         echo
     } >>"${REPORT}"
     return 1
