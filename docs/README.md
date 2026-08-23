@@ -195,14 +195,19 @@ default to `45` (or later):
 
 ### Base-image provenance (see [provenance.md](./provenance.md))
 
-- **The base labels can go missing without failing the build.** `just build`
-  stamps `org.opencontainers.image.base.name`/`.base.digest` and
-  `org.ublue-gharden91.base-image.version`; nothing asserts they survived.
-  They currently come through `just ostree-rechunk` intact (verified on a
-  published image), but a future rechunker — or a switch to the `chunkah`
-  recipe, which rewrites labels explicitly — could drop them and the build
-  would still go green. Reconciliation would quietly stop working. Spot-check
-  with `skopeo inspect docker://ghcr.io/gharden91/ublue-gharden91:latest`.
+- **The base labels can go missing without failing the build — this already
+  happened once.** `just build` stamps `org.opencontainers.image.base.name`/
+  `.base.digest` and `org.ublue-gharden91.base-image.version`; nothing in CI
+  asserts they survived. The rootless `ostree-rechunk` rewrite (#45/#48)
+  silently dropped every custom label the first time it ran, caught only by
+  manually inspecting a locally-rechunked image — the build stayed green
+  throughout. Fixed by explicitly re-supplying labels via `--label`
+  (ADR-202608230454), but that fix is itself a hand-maintained round-trip a
+  future edit to `ostree-rechunk` could break the same way, silently, again.
+  The `chunkah`/`rechunk` recipe (#47, dormant) rewrites labels explicitly
+  too and has never been checked for this at all. Spot-check with
+  `skopeo inspect docker://ghcr.io/gharden91/ublue-gharden91:latest` — #33
+  tracks making this an actual CI assertion instead of a spot-check.
 - **`unknown` in the version label means upstream stopped setting theirs.**
   The version string is read from the base's own
   `org.opencontainers.image.version`; if Bazzite drops it, ours records

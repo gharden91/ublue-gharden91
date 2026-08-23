@@ -124,9 +124,18 @@ podman image inspect ublue-gharden91:latest \
 - **Images built before this landed have no base labels.** Anything older than
   `latest.20260804-c1a542e` predates the stamping; for those, the date-guessing
   problem from #18 still applies. Nothing can retroactively add them.
-- **The labels survive rechunking.** `just ostree-rechunk` rewrites the image
-  config, but build-time labels come through intact — confirmed on the
-  published `latest.20260804-c1a542e`, which is post-rechunk and post-push.
+- **The labels survive rechunking, but not for free.** `rpm-ostree compose
+  build-chunked-oci`'s rootless `--rootfs` mode (the mount-based approach
+  `just ostree-rechunk` moved to — see ADR-202608230454) has no OCI image
+  config to read at all: a mounted rootfs is just files, and labels live in
+  image config, not on disk. Confirmed the hard way — the rootless rewrite
+  initially dropped every custom label silently, caught only by manually
+  inspecting a locally-rechunked image, not by CI (#33 tracks closing that
+  gap). `ostree-rechunk` now reads the source image's labels back with
+  `podman image inspect` and re-supplies them via `compose build-chunked-oci
+  --label` before rechunking, so they still come through — just via an
+  explicit round-trip, not automatically the way the old `--from`-based
+  recipe did it.
 - **The version string is whatever upstream set.** If a base build ever ships
   without `org.opencontainers.image.version`, ours records `unknown` rather
   than failing the build. The digest is still exact, so reconciliation is never
