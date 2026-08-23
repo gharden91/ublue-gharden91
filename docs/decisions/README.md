@@ -35,6 +35,7 @@ section tell you whether a record still binds.
 | [202608042137](202608042137-no-automated-template-sync.md) | Don't rebase/merge from the upstream template; port changes by hand | Accepted | repo |
 | [202608222309](202608222309-scheduled-drift-check-workflow.md) | Watch PlasmaZones, PowerShell, KWin skew, Fedora currency, and template drift with a scheduled workflow that files an issue | Accepted | repo |
 | [202608222345](202608222345-bazzite-version-buildarg-no-repo-variable.md) | Parameterize the Bazzite Fedora-version pin as a build arg, not a repo variable | Accepted | repo |
+| [202608230207](202608230207-review-template-range-aug2026.md) | Reviewed the Aug 2026 template range commit-by-commit; ported cosign and the rechunk rewrites as separate issues, skipped the rest | Accepted | repo |
 | [202608230454](202608230454-preserve-labels-through-rootless-rechunk.md) | Re-supply OCI labels explicitly in the rootless `ostree-rechunk` | Accepted | repo |
 
 > **Most of these were backfilled** in one pass (0001–0011) from `git log`, the
