@@ -218,9 +218,18 @@ check_kwin_skew() {
 check_template_drift() {
     local baseline_file=".github/template-drift-baseline"
     local template_url="https://github.com/ublue-os/image-template.git"
+    # Every file shared with the template that can change what gets built or
+    # which dependency bumps reach us. The bot configs are here because the
+    # template ships rules into them (e.g. 53f13303's `pinDigests` rule) that
+    # a Containerfile-only watch would let slip past unlogged. Shared files
+    # left out on purpose — README.md, LICENSE, .gitignore,
+    # artifacthub-repo.yml, image-template.env, system_files/**/.gitkeep —
+    # are metadata with no effect on the image or its update flow.
     local watched_paths=(
         ".github/workflows/build.yml"
         ".github/workflows/build-disk.yml"
+        ".github/renovate.json5"
+        ".github/dependabot.yml"
         "Justfile"
         "Containerfile"
         "build_files/build.sh"
