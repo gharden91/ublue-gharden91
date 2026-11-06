@@ -171,7 +171,7 @@ layering for throwaway experiments.
 
 ### Pin the base image to a Fedora-versioned tag
 
-The `Containerfile` uses `ghcr.io/ublue-os/bazzite-dx:stable-44` rather than
+The `Containerfile` uses `ghcr.io/ublue-os/bazzite-dx:stable-45` rather than
 the floating `bazzite-dx:stable` tag. `stable` jumps to whatever Fedora
 release Bazzite currently ships, but upstream's release assets are built per
 Fedora version (`.fc44`, `.fc45`, …) — the download URL in `build.sh` derives
@@ -184,13 +184,13 @@ to run through before bumping.
 
 - **Bump the version (recommended, no code change):** in GitHub go to
   *Settings > Secrets and variables > Actions > Variables* and set a repo
-  variable named `PLASMAZONES_VERSION` (e.g. `3.1.3`) to a release tag (minus
+  variable named `PLASMAZONES_VERSION` (e.g. `3.5.5`) to a release tag (minus
   the `v`) from
   https://github.com/fuddlesworth/PlasmaZones/releases. The next CI build
   picks it up. Leaving it unset falls back to the default baked into
   `build_files/build.sh`.
-- **Bump locally:** `PLASMAZONES_VERSION=3.1.3 just build`.
-- **Change the default:** edit `PLASMAZONES_VERSION="${PLASMAZONES_VERSION:-3.1.3}"`
+- **Bump locally:** `PLASMAZONES_VERSION=3.5.5 just build`.
+- **Change the default:** edit `PLASMAZONES_VERSION="${PLASMAZONES_VERSION:-3.5.5}"`
   in `build_files/build.sh`.
 - **After any bump or base-image KWin change:** check the build log for the
   PlasmaZones/KWin skew `WARNING` (see above).

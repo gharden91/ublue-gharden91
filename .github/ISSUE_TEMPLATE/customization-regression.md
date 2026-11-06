@@ -16,7 +16,7 @@ upstream project moved underneath the pin. Start from that assumption.
 
 ### Drift triage
 
-- [ ] Did the **base image** move recently? (New `stable-44` build / KWin point
+- [ ] Did the **base image** move recently? (New `stable-45` build / KWin point
   release.) Compare `kwin_wayland --version` (or the base's labels) against what
   the pinned RPM was built for.
 - [ ] For **PlasmaZones**: check the build log for the KWin skew `WARNING`

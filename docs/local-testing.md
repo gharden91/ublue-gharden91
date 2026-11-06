@@ -22,7 +22,7 @@ Build with a specific PowerShell or PlasmaZones version (see
 
 ```bash
 PWSH_VERSION=7.5.2 just build
-PLASMAZONES_VERSION=3.1.3 just build
+PLASMAZONES_VERSION=3.5.5 just build
 ```
 
 Changing either version re-downloads that release; otherwise rebuilds are fast.

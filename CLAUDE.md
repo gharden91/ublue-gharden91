@@ -2,7 +2,7 @@
 
 This is a custom [bootc](https://github.com/bootc-dev/bootc) / Universal Blue OS
 image. It layers a handful of customizations on top of
-`ghcr.io/ublue-os/bazzite-dx:stable-44` and publishes
+`ghcr.io/ublue-os/bazzite-dx:stable-45` and publishes
 `ghcr.io/gharden91/ublue-gharden91`. Almost everything the image *does* beyond
 the base is in **`build_files/build.sh`**; how it's wired is in `Containerfile`,
 `Justfile`, and `.github/workflows/`.
@@ -88,10 +88,10 @@ These hold across the whole image; the per-feature reasoning is in `docs/` and
 `docs/decisions/`.
 
 - **The base image tag is Fedora-versioned on purpose.** `Containerfile` pins
-  `bazzite-dx:stable-44`, not the floating `stable`, so the image's Fedora
+  `bazzite-dx:stable-45`, not the floating `stable`, so the image's Fedora
   release can't jump underneath the version-suffixed RPMs we download
-  (`.fc44`). Don't switch to `stable` — see ADR-0003 and the Watchlist before
-  bumping to `stable-45`. Because that tag still floats *within* Fedora 44,
+  (`.fc45`). Don't switch to `stable` — see ADR-0003 and the Watchlist before
+  bumping to `stable-46`. Because that tag still floats *within* Fedora 45,
   every build stamps the resolved base (name/digest/version) onto the image as
   labels — that's what makes an unpinned base reconcilable after the fact
   (ADR-0015, [`docs/provenance.md`](docs/provenance.md)). Don't drop those
