@@ -37,6 +37,7 @@ section tell you whether a record still binds.
 | [202608222345](202608222345-bazzite-version-buildarg-no-repo-variable.md) | Parameterize the Bazzite Fedora-version pin as a build arg, not a repo variable | Accepted | repo |
 | [202608230207](202608230207-review-template-range-aug2026.md) | Reviewed the Aug 2026 template range commit-by-commit; ported cosign and the rechunk rewrites as separate issues, skipped the rest | Accepted | repo |
 | [202608230454](202608230454-preserve-labels-through-rootless-rechunk.md) | Re-supply OCI labels explicitly in the rootless `ostree-rechunk` | Accepted | repo |
+| [202611061451](202611061451-ship-stable-45-bump-without-vm-boot.md) | Ship the stable-45 base bump on build-tier verification, without a VM boot | Accepted | base image |
 
 > **Most of these were backfilled** in one pass (0001–0011) from `git log`, the
 > `docs/` pages, and the code when the knowledge system was set up — the
