@@ -483,10 +483,10 @@ _run-vm $target_image $tag $type $config:
     run_args+=(--env "GPU=Y")
     run_args+=(--device=/dev/kvm)
     run_args+=(--volume "${PWD}/${image_file}":"/boot.${type}")
-    # Pinned: 7.37+ added a GPT probe that rejects bootc-image-builder's
-    # compressed qcow2s and silently boots Alpine instead. 7.36 is the newest
-    # tag without it. Override with VM_RUNNER_IMAGE= to retest a newer release.
-    run_args+=("${VM_RUNNER_IMAGE:-docker.io/qemux/qemu:7.36}")
+    # Pinned, never `latest` (ADR-0014): 7.37-7.48 short-read the GPT of
+    # bootc-image-builder's compressed qcow2s and silently boot Alpine instead.
+    # Fixed in 7.49. Override with VM_RUNNER_IMAGE= to retest another release.
+    run_args+=("${VM_RUNNER_IMAGE:-docker.io/qemux/qemu:7.50}")
 
     # Run the VM and open the browser to connect
     (sleep 30 && xdg-open http://localhost:"$port") &

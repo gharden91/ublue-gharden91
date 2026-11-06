@@ -213,9 +213,10 @@ since `_run-vm` pins the same known-good runner tag for every image type.
 
 ### If the VM boots Alpine instead of the image
 
-**Fixed by pinning — see below if it recurs.** `qemux/qemu` **7.37**
-(2026-07-19) added a GPT probe to its boot detection that rejects
-`bootc-image-builder`'s compressed qcow2s with:
+**Fixed upstream in 7.49; `_run-vm` pins a fixed tag — see below if it
+recurs.** `qemux/qemu` **7.37** (2026-07-19) added a GPT probe to its boot
+detection, and through **7.48** it rejects `bootc-image-builder`'s compressed
+qcow2s with:
 
 ```
 ERROR: Failed to read the complete GPT partition entry array!
@@ -226,26 +227,35 @@ It then silently downloads and boots Alpine, so you land at an Alpine login
 prompt instead of the image. **The disk is fine** — `qemu-img check` passes; the
 probe is what's wrong. Rebuilding the image does not help.
 
-`_run-vm` therefore pins `docker.io/qemux/qemu:7.36`, the newest tag that
-predates the probe (7.33–7.36 have no such code), and uses `--pull=missing` so
-`latest` is not silently pulled back in. As of 2026-08-04 the bug is still
-present in `latest` (7.43), and upstream has no commit addressing it.
+The cause is a `qemu-img dd` quirk: its `count=` is an *end position* counted
+from the start of the disk, not a block count after `skip=`. The probe read the
+GPT entry array (which starts at LBA 2) with `skip=2 count=<array size>`, so it
+always came back two sectors short and failed its own size check — even though
+the EFI partition it was looking for was in the bytes it did read. Upstream
+[`53cda3b`](https://github.com/qemus/qemu/commit/53cda3b) (first released in
+7.49) passes `count=$((skip + count))`.
 
-To retest a newer release without editing the Justfile:
+`_run-vm` pins a tag that has that fix, and uses `--pull=missing` so `latest`
+is never silently pulled in — a runner that boots the wrong OS while looking
+healthy is exactly what a pin protects against (ADR-0014). Tags 7.33–7.36 also
+work (they predate the probe); 7.37–7.48 do not.
+
+To try a different release without editing the Justfile:
 
 ```bash
-VM_RUNNER_IMAGE=docker.io/qemux/qemu:latest just run-vm
+VM_RUNNER_IMAGE=docker.io/qemux/qemu:TAG just run-vm
 ```
 
-If a fixed release appears, bump the pinned tag in `_run-vm`. To confirm whether
-a given tag has the offending probe:
+To check whether a given tag carries the fix (the error string itself is still
+present in fixed releases, so grep for the corrected read instead):
 
 ```bash
 podman run --rm --entrypoint bash docker.io/qemux/qemu:TAG \
-  -c 'grep -c "GPT partition entry array" /run/install.sh'
+  -c 'grep -c "count=\"\$((skip + count))\"" /run/install.sh'
 ```
 
-`0` means the tag is safe.
+`1` means fixed. Either way, the real test is a boot: GRUB must show
+`Bazzite (ostree:0)`, not Alpine.
 
 Fallback that bypasses the runner container entirely — boot the disk with host
 QEMU from the repo root:
