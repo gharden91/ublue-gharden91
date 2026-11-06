@@ -1,12 +1,12 @@
 # Bazzite's Fedora-version tag suffix, overridable at build time
-# (--build-arg BAZZITE_VERSION=45) to test-build against a candidate Fedora
+# (--build-arg BAZZITE_VERSION=46) to test-build against a candidate Fedora
 # bump before committing to it. Must be declared before the first FROM to be
 # usable in one. The default below is the actual pin (ADR-0003): bumping it
 # is a reviewed Containerfile edit per "Bumping the Fedora version" in
 # docs/README.md, not something CI overrides — unlike PWSH_VERSION /
 # PLASMAZONES_VERSION, there is deliberately no repo-variable override for
 # this one (see ADR-202608222345).
-ARG BAZZITE_VERSION=44
+ARG BAZZITE_VERSION=45
 
 # Allow build scripts to be referenced without being copied into the final image
 FROM scratch AS ctx
@@ -18,7 +18,7 @@ COPY system_files /system_files
 # to keep the Fedora version in lockstep with the fuddlesworth/PlasmaZones
 # COPR, which only ships builds for specific Fedora releases. See
 # docs/README.md's Maintenance Watchlist before bumping the ARG default above
-# to stable-45.
+# to the next Fedora release.
 FROM ghcr.io/ublue-os/bazzite-dx:stable-${BAZZITE_VERSION}
 ## Other possible base images include:
 # FROM ghcr.io/ublue-os/bazzite:testing
@@ -51,7 +51,7 @@ RUN rm /opt && mkdir /opt
 # PowerShell version, overridable at build time (--build-arg PWSH_VERSION=...)
 ARG PWSH_VERSION=7.5.2
 # PlasmaZones version, overridable at build time (--build-arg PLASMAZONES_VERSION=...)
-ARG PLASMAZONES_VERSION=3.1.3
+ARG PLASMAZONES_VERSION=3.5.5
 
 RUN --mount=type=bind,from=ctx,source=/,target=/ctx \
     --mount=type=cache,dst=/var/cache \

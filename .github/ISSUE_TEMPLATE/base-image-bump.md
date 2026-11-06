@@ -1,6 +1,6 @@
 ---
 name: Base image bump (Fedora / stable-NN)
-about: Move the Containerfile FROM to a new bazzite-dx tag (e.g. stable-44 → stable-45)
+about: Move the Containerfile FROM to a new bazzite-dx tag (e.g. stable-45 → stable-46)
 title: "Bump base image to stable-NN"
 labels: base-image
 ---
@@ -13,7 +13,7 @@ ADR-0003 (why we pin a Fedora-versioned tag at all).
 -->
 
 **Target tag:** `ghcr.io/ublue-os/bazzite-dx:stable-__`
-**Current tag:** `ghcr.io/ublue-os/bazzite-dx:stable-44`
+**Current tag:** `ghcr.io/ublue-os/bazzite-dx:stable-45`
 
 ### Pre-bump checklist (from the Maintenance Watchlist)
 

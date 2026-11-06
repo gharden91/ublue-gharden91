@@ -52,17 +52,21 @@ kwin_wayland --version   # running KWin
 rpm -q plasmazones       # installed PlasmaZones build
 ```
 
-### KWin version skew: current status (July 2026)
+### KWin version skew: current status
 
-The base image ships KWin **6.7.1**. The original COPR install went inert on
-deployed machines ("window manager integration inactive" notification) because
-the COPR build of v3.1.3 was compiled against **6.7.2** — the COPR
-auto-rebuilds against Fedora's latest KWin, which had moved ahead of the base
-image. **Switching to the pinned GitHub release RPM resolved it:** upstream's
-v3.1.3 release asset is a frozen July-1 build compiled against **6.7.1**
-(before Fedora updated KWin), so it matches the base image and the effect
-loads. The build log's skew check confirms it — `plugin embeds KWin
-6.7.x=[6.7.1]` → `matches image KWin 6.7.1`.
+The `stable-45` base ships KWin **6.8.2**, and the pinned release's `.fc45`
+asset embeds `6.8.2` — the build log's skew check reads `plugin embeds KWin
+6.8.x=[6.8.2]` → `matches image KWin 6.8.2`.
+
+How it got here is the useful part. The original COPR install went inert on
+deployed machines ("window manager integration inactive" notification)
+because the COPR auto-rebuilt against Fedora's latest KWin, ahead of the base
+image's; switching to a pinned release RPM fixed that. Later, on `stable-44`
+(KWin 6.7.5), the pinned 3.5.4 `.fc44` asset embedded **no** 6.7.x version at
+all — upstream had built it against a newer KWin than Bazzite's Fedora 44
+shipped — so the effect was inert again until the move to `stable-45`
+realigned them. **A per-Fedora asset (`.fcNN`) does not imply it was built
+against the KWin Bazzite ships on that Fedora**; only the skew check says so.
 
 This is a **version coincidence, not a permanent fix.** The release asset
 happened to be built against the KWin the base image ships; nothing guarantees
@@ -171,7 +175,7 @@ layering for throwaway experiments.
 
 ### Pin the base image to a Fedora-versioned tag
 
-The `Containerfile` uses `ghcr.io/ublue-os/bazzite-dx:stable-44` rather than
+The `Containerfile` uses `ghcr.io/ublue-os/bazzite-dx:stable-45` rather than
 the floating `bazzite-dx:stable` tag. `stable` jumps to whatever Fedora
 release Bazzite currently ships, but upstream's release assets are built per
 Fedora version (`.fc44`, `.fc45`, …) — the download URL in `build.sh` derives
@@ -184,13 +188,13 @@ to run through before bumping.
 
 - **Bump the version (recommended, no code change):** in GitHub go to
   *Settings > Secrets and variables > Actions > Variables* and set a repo
-  variable named `PLASMAZONES_VERSION` (e.g. `3.1.3`) to a release tag (minus
+  variable named `PLASMAZONES_VERSION` (e.g. `3.5.5`) to a release tag (minus
   the `v`) from
   https://github.com/fuddlesworth/PlasmaZones/releases. The next CI build
   picks it up. Leaving it unset falls back to the default baked into
   `build_files/build.sh`.
-- **Bump locally:** `PLASMAZONES_VERSION=3.1.3 just build`.
-- **Change the default:** edit `PLASMAZONES_VERSION="${PLASMAZONES_VERSION:-3.1.3}"`
+- **Bump locally:** `PLASMAZONES_VERSION=3.5.5 just build`.
+- **Change the default:** edit `PLASMAZONES_VERSION="${PLASMAZONES_VERSION:-3.5.5}"`
   in `build_files/build.sh`.
 - **After any bump or base-image KWin change:** check the build log for the
   PlasmaZones/KWin skew `WARNING` (see above).

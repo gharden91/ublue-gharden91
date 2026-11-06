@@ -44,7 +44,7 @@ echo "Installed Discord version: $(rpm -q discord)"
 # build that may not match the base image's KWin. See docs/plasmazones.md.
 # Version can be overridden at build time via the PLASMAZONES_VERSION build
 # arg (see Containerfile + .github/workflows/build.yml). Defaults if unset.
-PLASMAZONES_VERSION="${PLASMAZONES_VERSION:-3.1.3}"
+PLASMAZONES_VERSION="${PLASMAZONES_VERSION:-3.5.5}"
 FEDORA_RELEASE="$(rpm -E %fedora)"
 curl -fL -o /tmp/plasmazones.rpm \
     "https://github.com/fuddlesworth/PlasmaZones/releases/download/v${PLASMAZONES_VERSION}/plasmazones-${PLASMAZONES_VERSION}-1.fc${FEDORA_RELEASE}.x86_64.rpm"

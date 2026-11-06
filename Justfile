@@ -110,7 +110,7 @@ build $target_image=image_name $tag=default_tag:
         BUILD_ARGS+=("--build-arg" "PLASMAZONES_VERSION=${PLASMAZONES_VERSION}")
     fi
     # Forward a candidate Bazzite Fedora-version override, for locally
-    # test-building against e.g. stable-45 before committing to it in
+    # test-building against e.g. stable-46 before committing to it in
     # Containerfile (see "Bumping the Fedora version" in docs/README.md).
     # Deliberately not set from a repo variable in CI — unlike PWSH_VERSION/
     # PLASMAZONES_VERSION, the base pin only moves via a reviewed Containerfile

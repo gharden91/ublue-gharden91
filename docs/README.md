@@ -26,7 +26,7 @@ settled call. *Open work* lives only in
 
 ## Maintenance Watchlist
 
-This image is built on top of `ghcr.io/ublue-os/bazzite-dx:stable-44`, a moving
+This image is built on top of `ghcr.io/ublue-os/bazzite-dx:stable-45`, a moving
 target maintained upstream. The items below are things that can break
 silently — the build still succeeds, but the customization stops doing what
 it's supposed to — because the base image changed underneath us. Check these
@@ -37,7 +37,7 @@ build starts behaving oddly.
 runs weekly (and on demand via `workflow_dispatch`) and files or updates a
 `drift-watch`-labeled issue when it finds: a new PlasmaZones release, a new
 PowerShell release, the pinned PlasmaZones RPM no longer matching the base
-image's KWin, the base Fedora version becoming stale (`stable-44` behind what
+image's KWin, the base Fedora version becoming stale (`stable-45` behind what
 `stable` currently resolves to), or
 [`ublue-os/image-template`](https://github.com/ublue-os/image-template)
 touching a file this repo forked from it and now maintains by hand (see
@@ -74,12 +74,12 @@ bash .github/scripts/file-drift-issue.sh /tmp/drift-report.md   # prints the iss
   read access to this repo's Actions runs — the same `gh` you already used
   for `GITHUB_TOKEN` above.
 
-**Why `stable-44` and not the floating `stable` tag:** `bazzite-dx:stable`
+**Why `stable-45` and not the floating `stable` tag:** `bazzite-dx:stable`
 tracks whatever Fedora release Bazzite currently ships, and jumps to the next
 major version whenever upstream cuts over. PlasmaZones release assets are
 built per Fedora version (`.fc44`, `.fc45`, …), so an unannounced Fedora bump
 on `stable` could land before PlasmaZones has a matching build, breaking the
-image build with no warning. Pinning to the version-suffixed tag (`stable-44`)
+image build with no warning. Pinning to the version-suffixed tag (`stable-45`)
 keeps the base image's Fedora version fixed until we deliberately choose to
 move — see "Bumping the Fedora version" below.
 
@@ -114,15 +114,17 @@ this list is just the "what could rot" summary in one place.
 
 The `Containerfile`'s `FROM` line is pinned to
 `ghcr.io/ublue-os/bazzite-dx:stable-${BAZZITE_VERSION}`, where
-`BAZZITE_VERSION` is a build arg defaulting to `44` — specifically so it and
+`BAZZITE_VERSION` is a build arg defaulting to `45` — specifically so it and
 the PlasmaZones COPR stay on the same Fedora release. Before moving the
-default to `45` (or later):
+default to the next release (`46` or later):
 
 1. Confirm the pinned PlasmaZones release has an RPM asset for the target
    Fedora version on the
    [releases page](https://github.com/fuddlesworth/PlasmaZones/releases)
    (look for `plasmazones-<version>-1.fc<NN>.x86_64.rpm` — the download URL in
-   `build.sh` derives `fc<NN>` from the base image automatically).
+   `build.sh` derives `fc<NN>` from the base image automatically). Don't
+   assume an older pin gains the new suffix: on the 44 → 45 bump, `.fc45`
+   assets only existed from v3.5.4 on, so the pin had to move with the base.
 2. Confirm which Fedora version a candidate base image tag actually is before
    pointing the `Containerfile` at it — the tag name is the source of truth
    (Universal Blue's `stable-NN` suffix *is* the Fedora major version), but you
@@ -142,7 +144,7 @@ default to `45` (or later):
    `BAZZITE_VERSION` build-arg override:
 
    ```bash
-   BAZZITE_VERSION=45 just build
+   BAZZITE_VERSION=46 just build
    ```
 
    (see [local-testing.md](./local-testing.md)) to confirm `plasmazones` still
@@ -150,7 +152,7 @@ default to `45` (or later):
    sets `BAZZITE_VERSION` (see
    [ADR-202608222345](decisions/202608222345-bazzite-version-buildarg-no-repo-variable.md));
    the daily scheduled build always uses whatever's in the file.
-4. Once the test build passes, bump the `ARG BAZZITE_VERSION=44` default in
+4. Once the test build passes, bump the `ARG BAZZITE_VERSION` default in
    `Containerfile` itself and open a PR. Only merge the bump once all checks
    pass — don't let the base image and the COPR drift to different Fedora
    versions.
