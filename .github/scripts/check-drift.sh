@@ -212,7 +212,7 @@ check_kwin_skew() {
 # ADR-202608042137: no auto-merge, substantive changes get ported by a human
 # who reads the diff). This only tells us *that* the template moved in a
 # watched path — not whether the change is substantive versus a dependency
-# bump Renovate already covers; that judgment call is exactly what
+# bump Dependabot already covers; that judgment call is exactly what
 # ADR-202608042137's file-by-file table (and the #19 comment it points at) is
 # for, and stays with whoever reads the report.
 check_template_drift() {
@@ -221,7 +221,10 @@ check_template_drift() {
     # Every file shared with the template that can change what gets built or
     # which dependency bumps reach us. The bot configs are here because the
     # template ships rules into them (e.g. 53f13303's `pinDigests` rule) that
-    # a Containerfile-only watch would let slip past unlogged. Shared files
+    # a Containerfile-only watch would let slip past unlogged. We don't run
+    # Renovate ourselves, but upstream's renovate.json5 still decides which
+    # bumps its bot proposes and so which ones reach us through this check
+    # (ADR-202611092130). Shared files
     # left out on purpose — README.md, LICENSE, .gitignore,
     # artifacthub-repo.yml, image-template.env, system_files/**/.gitkeep —
     # are metadata with no effect on the image or its update flow.
@@ -318,8 +321,9 @@ check_template_drift() {
         echo "2. Decide: **port** (behavioral, applies to us — file its own issue per"
         echo "   [ADR-0016](${REPO_URL}/docs/decisions/0016-one-idea-per-issue-one-issue-per-pr.md),"
         echo "   referencing the source commit hash(es)), or **skip** (dependency/action-digest"
-        echo "   bump already covered by Renovate, or a file/section we've diverged from"
+        echo "   bump Dependabot already covers here, i.e. a \`uses:\` ref, or a file/section we've diverged from"
         echo "   entirely) — with the reason either way."
+        echo "   A version bump Dependabot can't see (an action input like \`cosign-release:\`) is a **port**."
         echo "3. Add one row per commit (or per group, for a multi-commit rewrite) to"
         echo "   [docs/template-drift-log.md](${REPO_URL}/docs/template-drift-log.md) —"
         echo "   the running ledger of every template commit reviewed, port-or-skip and"

@@ -1,6 +1,6 @@
 # ADR-0015: Tier update cadence by value × breakage risk, not one rule for everything
 
-- **Status:** Accepted
+- **Status:** Accepted — PowerShell's Renovate-PR mechanism superseded by [ADR-202611092130](202611092130-dependabot-plus-drift-check-no-renovate.md) (the tier stands; the bump arrives as a drift issue instead)
 - **Date:** 2026-08-04
 - **Scope:** repo
 - **Shipped in:** #18 (base-image provenance stamping); cadence tiers are policy

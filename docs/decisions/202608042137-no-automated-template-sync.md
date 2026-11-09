@@ -1,6 +1,6 @@
 # ADR-202608042137: Don't rebase or merge from the upstream template; port changes by hand
 
-- **Status:** Accepted
+- **Status:** Accepted — finding 3's premise corrected by [ADR-202611092130](202611092130-dependabot-plus-drift-check-no-renovate.md): Renovate never ran here; Dependabot is what bumps our actions
 - **Date:** 2026-08-04
 - **Scope:** repo
 - **Shipped in:** the PR closing #25
