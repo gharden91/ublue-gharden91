@@ -46,8 +46,11 @@ ADR-202608042137) — tracked against a baseline commit in
 reported range and logging it in
 [template-drift-log.md](./template-drift-log.md). See
 [ADR-202608222309](decisions/202608222309-scheduled-drift-check-workflow.md)
-for the full "what it watches and why," including why PowerShell is covered
-here as a stopgap even though ADR-0015 assigns it a Renovate PR long-term.
+for the full "what it watches and why." This check is also how bumps that
+only upstream's Renovate proposes reach us: this repo runs Dependabot (for
+`uses:` refs), not Renovate, so a pin like `cosign-release:` or `PWSH_VERSION`
+moves only when a drift issue reports it and someone ports it
+([ADR-202611092130](decisions/202611092130-dependabot-plus-drift-check-no-renovate.md)).
 Everything else below is still a manual check.
 
 **Run it yourself between scheduled runs**, e.g. right after noticing

@@ -1,6 +1,6 @@
 # ADR-202608222309: Watch PlasmaZones, PowerShell, KWin skew, Fedora currency, and template drift with a scheduled workflow that files an issue
 
-- **Status:** Accepted
+- **Status:** Accepted — the planned Renovate hand-off for `PWSH_VERSION` superseded by [ADR-202611092130](202611092130-dependabot-plus-drift-check-no-renovate.md); the PowerShell watch is permanent
 - **Date:** 2026-08-22
 - **Scope:** repo
 - **Shipped in:** the PR closing #19

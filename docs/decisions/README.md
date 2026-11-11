@@ -29,15 +29,16 @@ section tell you whether a record still binds.
 | [0012](0012-knowledge-capture-is-a-skill-not-a-hook.md) | Knowledge capture is a skill (`/handoff`), not an enforcing hook | Accepted | repo |
 | [0013](0013-emoji-bug-was-a-stale-user-font-cache.md) | The color-emoji bug was a stale per-user font cache, not the image | Accepted | fonts |
 | [0014](0014-pin-the-vm-runner-image.md) | Pin the local VM runner image instead of tracking `latest` | Accepted | local testing |
-| [0015](0015-update-cadence-tiers.md) | Tier update cadence by value × breakage risk, not one rule for everything | Accepted | repo |
+| [0015](0015-update-cadence-tiers.md) | Tier update cadence by value × breakage risk, not one rule for everything | Accepted; PowerShell mechanism superseded by ADR-202611092130 | repo |
 | [0016](0016-one-idea-per-issue-one-issue-per-pr.md) | One idea per issue, one issue per PR | Accepted | repo |
 | [202608042129](202608042129-timestamp-ids-for-decision-records.md) | Timestamp-based IDs for decision records | Accepted | repo |
-| [202608042137](202608042137-no-automated-template-sync.md) | Don't rebase/merge from the upstream template; port changes by hand | Accepted | repo |
-| [202608222309](202608222309-scheduled-drift-check-workflow.md) | Watch PlasmaZones, PowerShell, KWin skew, Fedora currency, and template drift with a scheduled workflow that files an issue | Accepted | repo |
+| [202608042137](202608042137-no-automated-template-sync.md) | Don't rebase/merge from the upstream template; port changes by hand | Accepted; Renovate premise corrected by ADR-202611092130 | repo |
+| [202608222309](202608222309-scheduled-drift-check-workflow.md) | Watch PlasmaZones, PowerShell, KWin skew, Fedora currency, and template drift with a scheduled workflow that files an issue | Accepted; PowerShell hand-off superseded by ADR-202611092130 | repo |
 | [202608222345](202608222345-bazzite-version-buildarg-no-repo-variable.md) | Parameterize the Bazzite Fedora-version pin as a build arg, not a repo variable | Accepted | repo |
 | [202608230207](202608230207-review-template-range-aug2026.md) | Reviewed the Aug 2026 template range commit-by-commit; ported cosign and the rechunk rewrites as separate issues, skipped the rest | Accepted | repo |
 | [202608230454](202608230454-preserve-labels-through-rootless-rechunk.md) | Re-supply OCI labels explicitly in the rootless `ostree-rechunk` | Accepted | repo |
 | [202611061451](202611061451-ship-stable-45-bump-without-vm-boot.md) | Ship the stable-45 base bump on build-tier verification, without a VM boot | Accepted | base image |
+| [202611092130](202611092130-dependabot-plus-drift-check-no-renovate.md) | Keep versions current with Dependabot and the drift check; don't run Renovate | Accepted | repo |
 
 > **Most of these were backfilled** in one pass (0001–0011) from `git log`, the
 > `docs/` pages, and the code when the knowledge system was set up — the
