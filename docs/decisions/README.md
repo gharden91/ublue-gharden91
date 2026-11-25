@@ -39,6 +39,7 @@ section tell you whether a record still binds.
 | [202608230454](202608230454-preserve-labels-through-rootless-rechunk.md) | Re-supply OCI labels explicitly in the rootless `ostree-rechunk` | Accepted | repo |
 | [202611061451](202611061451-ship-stable-45-bump-without-vm-boot.md) | Ship the stable-45 base bump on build-tier verification, without a VM boot | Accepted | base image |
 | [202611092130](202611092130-dependabot-plus-drift-check-no-renovate.md) | Keep versions current with Dependabot and the drift check; don't run Renovate | Accepted | repo |
+| [202611251200](202611251200-plasmazones-pin-is-the-release-tag.md) | Pin PlasmaZones by its full release tag, revision suffix included | Accepted | plasmazones |
 
 > **Most of these were backfilled** in one pass (0001–0011) from `git log`, the
 > `docs/` pages, and the code when the knowledge system was set up — the

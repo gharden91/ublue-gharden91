@@ -100,17 +100,21 @@ this list is just the "what could rot" summary in one place.
   release. Expect to bump the pin shortly after each base-image KWin update.
 - **New releases to pin.** `PLASMAZONES_VERSION` is pinned and does not
   auto-update. Check
-  [PlasmaZones releases](https://github.com/fuddlesworth/PlasmaZones/releases)
-  periodically and bump the `PLASMAZONES_VERSION` repo variable.
+  [PlasmaZones releases](https://github.com/phosphor-works/PlasmaZones/releases)
+  periodically and bump the `PLASMAZONES_VERSION` repo variable. A KWin-only
+  rebuild arrives as a package-revision tag (`v3.5.5-r3`), and that is what
+  fixes skew. Pin the full tag, suffix included.
 - **Release assets keep their current shape.** The download URL assumes a
-  `plasmazones-<version>-1.fc<NN>.x86_64.rpm` asset per release. If upstream
+  `plasmazones-<version>-<pkgrel>.fc<NN>.x86_64.rpm` asset per release, with
+  `<pkgrel>` taken from the tag's `-rN` suffix (1 when there isn't one). If upstream
   renames assets or stops publishing Fedora RPMs, the build breaks outright.
 - **Base image still ships KDE Plasma.** PlasmaZones is a KWin extension and
   is dead weight (or a build failure) on a non-Plasma desktop. Confirm
   `bazzite-dx` hasn't switched its default DE before/after a base image bump.
 - **Upstream project is still maintained.** It's a single-maintainer project;
   if it goes stale or disappears, the build breaks outright. Check
-  [fuddlesworth/PlasmaZones](https://github.com/fuddlesworth/PlasmaZones) for
+  [phosphor-works/PlasmaZones](https://github.com/phosphor-works/PlasmaZones)
+  (formerly `fuddlesworth/PlasmaZones`) for
   activity periodically.
 
 ### Bumping the Fedora version
@@ -118,13 +122,13 @@ this list is just the "what could rot" summary in one place.
 The `Containerfile`'s `FROM` line is pinned to
 `ghcr.io/ublue-os/bazzite-dx:stable-${BAZZITE_VERSION}`, where
 `BAZZITE_VERSION` is a build arg defaulting to `45` — specifically so it and
-the PlasmaZones COPR stay on the same Fedora release. Before moving the
+the PlasmaZones release RPMs stay on the same Fedora release. Before moving the
 default to the next release (`46` or later):
 
 1. Confirm the pinned PlasmaZones release has an RPM asset for the target
    Fedora version on the
-   [releases page](https://github.com/fuddlesworth/PlasmaZones/releases)
-   (look for `plasmazones-<version>-1.fc<NN>.x86_64.rpm` — the download URL in
+   [releases page](https://github.com/phosphor-works/PlasmaZones/releases)
+   (look for `plasmazones-<version>-<pkgrel>.fc<NN>.x86_64.rpm` — the download URL in
    `build.sh` derives `fc<NN>` from the base image automatically). Don't
    assume an older pin gains the new suffix: on the 44 → 45 bump, `.fc45`
    assets only existed from v3.5.4 on, so the pin had to move with the base.

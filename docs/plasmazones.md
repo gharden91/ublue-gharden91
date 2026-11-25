@@ -2,18 +2,53 @@
 
 ## Intent
 
-Ship [PlasmaZones](https://github.com/fuddlesworth/PlasmaZones) baked into the
+Ship [PlasmaZones](https://github.com/phosphor-works/PlasmaZones) baked into the
 image so KWin window-snapping zones are available on every machine that rebases
 to this image, without per-machine setup or runtime package layering.
 
 ## What is installed
 
 - The `plasmazones` RPM, downloaded from the upstream
-  [GitHub releases](https://github.com/fuddlesworth/PlasmaZones/releases)
-  (`plasmazones-<version>-1.fc<NN>.x86_64.rpm` asset) and installed with
+  [GitHub releases](https://github.com/phosphor-works/PlasmaZones/releases)
+  (`plasmazones-<version>-<pkgrel>.fc<NN>.x86_64.rpm` asset) and installed with
   `dnf5`, which resolves its dependencies from the image's normal repos.
+  The project moved from `fuddlesworth/PlasmaZones` to
+  `phosphor-works/PlasmaZones` in late 2026. `build.sh` uses the new path.
 - Version is pinned via `PLASMAZONES_VERSION` in `build_files/build.sh`
   (overridable per build — see Maintenance below).
+
+### Package revisions (`-rN` tags)
+
+When a distro moves to a new KWin, upstream rebuilds the **unchanged source**
+against it and publishes the result as a *package revision*. The release tag
+gets an `-rN` suffix, and the RPM release field becomes `N`:
+
+| Tag | Fedora 45 asset |
+|---|---|
+| `v3.5.5` | `plasmazones-3.5.5-1.fc45.x86_64.rpm` |
+| `v3.5.5-r2` | `plasmazones-3.5.5-2.fc45.x86_64.rpm` |
+| `v3.5.5-r3` | `plasmazones-3.5.5-3.fc45.x86_64.rpm` |
+
+`PLASMAZONES_VERSION` is spelled **exactly like the tag, minus the `v`**:
+`3.5.5` or `3.5.5-r3`. `build.sh` splits off a trailing `-rN` to build the
+asset name. A bare version means release 1. Keeping one knob in tag form means
+the drift check compares it to upstream's latest tag with no translation. It
+also means a revision bump is the same one-variable edit as a version bump.
+Before this, the URL hardcoded release `-1`, so revisions couldn't be pinned at
+all.
+
+Each release also publishes a `kwin-baseline.json` asset with the `pkgrel` and
+the KWin version each distro's package was built against
+(`"fedora-45": "6.8.3"`). It's the quickest way to find a matching release
+without downloading an RPM:
+
+```bash
+curl -fsSL https://github.com/phosphor-works/PlasmaZones/releases/download/v3.5.5-r3/kwin-baseline.json
+```
+
+That file is upstream's claim. The build's skew check, which reads the version
+embedded in the installed plugin, is still the ground truth. For 3.5.5 the two
+agreed: r1 claims and embeds 6.8.2, and r3 claims and embeds 6.8.3.
 - No third-party repo (COPR or otherwise) is added to the image.
 
 See [local-testing.md](./local-testing.md) for full build/test commands. Verify
@@ -54,9 +89,11 @@ rpm -q plasmazones       # installed PlasmaZones build
 
 ### KWin version skew: current status
 
-The `stable-45` base ships KWin **6.8.2**, and the pinned release's `.fc45`
-asset embeds `6.8.2` — the build log's skew check reads `plugin embeds KWin
-6.8.x=[6.8.2]` → `matches image KWin 6.8.2`.
+The `stable-45` base ships KWin **6.8.3**, and the pinned `3.5.5-r3` `.fc45`
+asset embeds `6.8.3`. This was checked by extracting the RPM: the effect
+plugin `kwin_effect_plasmazones.so` contains exactly one 6.8.x string,
+`6.8.3`. The original `3.5.5` (release 1) embeds `6.8.2`. It went inert when
+Bazzite moved from KWin 6.8.2 to 6.8.3, and the drift check caught it.
 
 How it got here is the useful part. The original COPR install went inert on
 deployed machines ("window manager integration inactive" notification)
@@ -103,8 +140,8 @@ re-derive them.
   candidate RPM without installing it:
 
   ```bash
-  rpm2cpio plasmazones-<ver>-1.fc44.x86_64.rpm | cpio -i --to-stdout '*plasmazones.so' \
-      | grep -aoE '6\.7\.[0-9]+' | sort | uniq -c
+  rpm2cpio plasmazones-<ver>-<pkgrel>.fc45.x86_64.rpm | cpio -i --to-stdout '*plasmazones.so' \
+      | grep -aoE '6\.8\.[0-9]+' | sort | uniq -c
   ```
 
   The built-against version is the single `6.7.x` string the plugin embeds
@@ -188,14 +225,15 @@ to run through before bumping.
 
 - **Bump the version (recommended, no code change):** in GitHub go to
   *Settings > Secrets and variables > Actions > Variables* and set a repo
-  variable named `PLASMAZONES_VERSION` (e.g. `3.5.5`) to a release tag (minus
-  the `v`) from
-  https://github.com/fuddlesworth/PlasmaZones/releases. The next CI build
+  variable named `PLASMAZONES_VERSION` (e.g. `3.5.5-r3`) to a release tag
+  (minus the `v`, *including* any `-rN` revision suffix) from
+  https://github.com/phosphor-works/PlasmaZones/releases. The next CI build
   picks it up. Leaving it unset falls back to the default baked into
   `build_files/build.sh`.
-- **Bump locally:** `PLASMAZONES_VERSION=3.5.5 just build`.
-- **Change the default:** edit `PLASMAZONES_VERSION="${PLASMAZONES_VERSION:-3.5.5}"`
-  in `build_files/build.sh`.
+- **Bump locally:** `PLASMAZONES_VERSION=3.5.5-r3 just build`.
+- **Change the default:** edit `PLASMAZONES_VERSION="${PLASMAZONES_VERSION:-3.5.5-r3}"`
+  in `build_files/build.sh` and `ARG PLASMAZONES_VERSION=` in `Containerfile`
+  (keep them the same).
 - **After any bump or base-image KWin change:** check the build log for the
   PlasmaZones/KWin skew `WARNING` (see above).
 

@@ -44,10 +44,24 @@ echo "Installed Discord version: $(rpm -q discord)"
 # build that may not match the base image's KWin. See docs/plasmazones.md.
 # Version can be overridden at build time via the PLASMAZONES_VERSION build
 # arg (see Containerfile + .github/workflows/build.yml). Defaults if unset.
-PLASMAZONES_VERSION="${PLASMAZONES_VERSION:-3.5.5}"
+#
+# PLASMAZONES_VERSION is the release *tag* minus the leading "v". Upstream
+# rebuilds an unchanged source against a newer KWin as a package revision,
+# tagged v<ver>-r<N> with RPMs named <ver>-<N>; the first build is the bare
+# v<ver> tag with RPM release 1. So "3.5.5" -> v3.5.5 / 3.5.5-1, and
+# "3.5.5-r3" -> v3.5.5-r3 / 3.5.5-3. One knob, spelled exactly like the tag,
+# so the drift check compares it to upstream's latest tag with no translation.
+PLASMAZONES_VERSION="${PLASMAZONES_VERSION:-3.5.5-r3}"
+if [[ "${PLASMAZONES_VERSION}" =~ ^(.+)-r([0-9]+)$ ]]; then
+    PLASMAZONES_UPSTREAM="${BASH_REMATCH[1]}"
+    PLASMAZONES_PKGREL="${BASH_REMATCH[2]}"
+else
+    PLASMAZONES_UPSTREAM="${PLASMAZONES_VERSION}"
+    PLASMAZONES_PKGREL=1
+fi
 FEDORA_RELEASE="$(rpm -E %fedora)"
 curl -fL -o /tmp/plasmazones.rpm \
-    "https://github.com/fuddlesworth/PlasmaZones/releases/download/v${PLASMAZONES_VERSION}/plasmazones-${PLASMAZONES_VERSION}-1.fc${FEDORA_RELEASE}.x86_64.rpm"
+    "https://github.com/phosphor-works/PlasmaZones/releases/download/v${PLASMAZONES_VERSION}/plasmazones-${PLASMAZONES_UPSTREAM}-${PLASMAZONES_PKGREL}.fc${FEDORA_RELEASE}.x86_64.rpm"
 dnf5 -y install /tmp/plasmazones.rpm
 rm -f /tmp/plasmazones.rpm
 

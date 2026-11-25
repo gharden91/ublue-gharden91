@@ -18,7 +18,7 @@ ADR-0003 (why we pin a Fedora-versioned tag at all).
 ### Pre-bump checklist (from the Maintenance Watchlist)
 
 - [ ] Confirm the pinned **PlasmaZones** release has an RPM asset for the target
-  Fedora version (`plasmazones-<ver>-1.fc<NN>.x86_64.rpm`).
+  Fedora version (`plasmazones-<ver>-<pkgrel>.fc<NN>.x86_64.rpm`).
 - [ ] Confirm which Fedora version the candidate tag actually is:
   `podman run --rm ghcr.io/ublue-os/bazzite-dx:<tag> sh -c 'grep VERSION_ID= /etc/os-release; uname -m'`
 - [ ] Check the **PlasmaZones / KWin skew** — does the pinned release match the

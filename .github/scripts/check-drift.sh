@@ -59,7 +59,7 @@ pinned_version() {
         printf '%s\n' "${repo_val}"
         return
     fi
-    sed -n "s/^${key}=\"\\\${${key}:-\\([0-9.]*\\)}\"/\\1/p" build_files/build.sh | head -n1
+    sed -n "s/^${key}=\"\\\${${key}:-\\([0-9.]*\\(-r[0-9]*\\)\\{0,1\\}\\)}\"/\\1/p" build_files/build.sh | head -n1
 }
 
 # Read a `ARG KEY=default` value out of Containerfile — how BAZZITE_VERSION
@@ -183,8 +183,8 @@ check_kwin_skew() {
         return 0
     fi
 
-    if grep -qE 'WARNING: PlasmaZones [0-9.]+ is not built against' <<<"${log_lines}"; then
-        pinned="$(grep -oP 'WARNING: PlasmaZones \K[0-9.]+' <<<"${log_lines}" | head -n1)"
+    if grep -qE 'WARNING: PlasmaZones [0-9.]+(-r[0-9]+)? is not built against' <<<"${log_lines}"; then
+        pinned="$(grep -oP 'WARNING: PlasmaZones \K[0-9.]+(-r[0-9]+)?' <<<"${log_lines}" | head -n1)"
         kwin_version="$(grep -oP "this image's KWin \K[0-9.]+" <<<"${log_lines}" | head -n1)"
         plugin_vers="$(grep -oP 'embeds \[\K[^]]*' <<<"${log_lines}" | head -n1)"
         log "KWin skew (build.yml run ${run_id}): image KWin=${kwin_version:-?}; PlasmaZones ${pinned:-?} embeds=[${plugin_vers:-?}]"
@@ -344,7 +344,7 @@ check_template_drift() {
 }
 
 drifted=0
-check_pinned_version "PlasmaZones" "PLASMAZONES_VERSION" "fuddlesworth/PlasmaZones" "docs/plasmazones.md" || drifted=1
+check_pinned_version "PlasmaZones" "PLASMAZONES_VERSION" "phosphor-works/PlasmaZones" "docs/plasmazones.md" || drifted=1
 check_pinned_version "PowerShell" "PWSH_VERSION" "PowerShell/PowerShell" "docs/powershell.md" || drifted=1
 check_fedora_currency || drifted=1
 check_kwin_skew || drifted=1
