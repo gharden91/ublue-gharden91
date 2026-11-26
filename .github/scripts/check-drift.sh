@@ -59,7 +59,7 @@ pinned_version() {
         printf '%s\n' "${repo_val}"
         return
     fi
-    sed -n "s/^${key}=\"\\\${${key}:-\\([0-9.]*\\)}\"/\\1/p" build_files/build.sh | head -n1
+    sed -n "s/^${key}=\"\\\${${key}:-\\([0-9.]*\\(-r[0-9]*\\)\\{0,1\\}\\)}\"/\\1/p" build_files/build.sh | head -n1
 }
 
 # Read a `ARG KEY=default` value out of Containerfile — how BAZZITE_VERSION
@@ -78,6 +78,112 @@ latest_gh_release() {
     curl -fsSL -H "Accept: application/vnd.github+json" "${auth[@]}" \
         "https://api.github.com/repos/${repo}/releases/latest" |
         jq -r '.tag_name // empty' | sed 's/^v//'
+}
+
+PLASMAZONES_REPO="phosphor-works/PlasmaZones"
+
+# Upstream's *claim* of the KWin a release's fedora-<NN> package was built
+# against, read from the kwin-baseline.json asset each release publishes
+# ({"pkgrel": 3, "kwin": {"fedora-45": "6.8.3", ...}}). Empty when the
+# release has no such file or no entry for that Fedora: callers treat empty
+# as "unknown", never as a mismatch. The build-time skew check in build.sh
+# (the version embedded in the installed plugin) stays the ground truth;
+# this is only used to *suggest* which release to pin.
+plasmazones_baseline_kwin() {
+    local tag="$1" fedora="$2"
+    curl -fsSL "https://github.com/${PLASMAZONES_REPO}/releases/download/${tag}/kwin-baseline.json" 2>/dev/null |
+        jq -r --arg k "fedora-${fedora}" '.kwin[$k] // empty' 2>/dev/null
+}
+
+# The newest published PlasmaZones release (of the 15 most recent) whose
+# kwin-baseline.json claims its fedora-<NN> package was built against
+# <kwin>. Prints the tag minus the "v", which is exactly how
+# PLASMAZONES_VERSION spells it (ADR-202611251200), or nothing.
+plasmazones_matching_release() {
+    local kwin="$1" fedora="$2" auth=() tag
+    [[ -n "${GITHUB_TOKEN:-}" ]] && auth=(-H "Authorization: Bearer ${GITHUB_TOKEN}")
+    while read -r tag; do
+        [[ -n "${tag}" ]] || continue
+        if [[ "$(plasmazones_baseline_kwin "${tag}" "${fedora}")" == "${kwin}" ]]; then
+            printf '%s\n' "${tag#v}"
+            return 0
+        fi
+    done < <(curl -fsSL -H "Accept: application/vnd.github+json" "${auth[@]}" \
+        "https://api.github.com/repos/${PLASMAZONES_REPO}/releases?per_page=15" 2>/dev/null |
+        jq -r '.[] | select((.draft or .prerelease) | not) | .tag_name' 2>/dev/null)
+}
+
+# The PlasmaZones lines from the most recent successful main build.yml run's
+# log, fetched once and cached for every check that needs them. Sets
+# LAST_BUILD_RUN_ID and LAST_BUILD_PZ_LOG; returns 1 (logging why) when either
+# can't be had. Requires the `gh` CLI with read access to this repo's runs.
+LAST_BUILD_FETCHED=""
+LAST_BUILD_RUN_ID=""
+LAST_BUILD_PZ_LOG=""
+last_build_plasmazones_log() {
+    if [[ -z "${LAST_BUILD_FETCHED}" ]]; then
+        LAST_BUILD_FETCHED=1
+        if ! command -v gh >/dev/null 2>&1; then
+            log "last build log: gh CLI not found"
+            return 1
+        fi
+        LAST_BUILD_RUN_ID="$(gh run list --repo "${GH_REPO}" --workflow build.yml --branch main \
+            --status success --limit 1 --json databaseId --jq '.[0].databaseId // empty' 2>/dev/null)"
+        if [[ -z "${LAST_BUILD_RUN_ID}" ]]; then
+            log "last build log: no recent successful build.yml run found"
+            return 1
+        fi
+        LAST_BUILD_PZ_LOG="$(gh run view "${LAST_BUILD_RUN_ID}" --repo "${GH_REPO}" --log 2>/dev/null |
+            grep -F 'PlasmaZones')" || LAST_BUILD_PZ_LOG=""
+        if [[ -z "${LAST_BUILD_PZ_LOG}" ]]; then
+            log "last build log: no PlasmaZones lines in run ${LAST_BUILD_RUN_ID}'s log"
+        fi
+    fi
+    [[ -n "${LAST_BUILD_PZ_LOG}" ]]
+}
+
+# The base image's KWin as the last successful build saw it, from build.sh's
+# "PlasmaZones skew check: image KWin=X.Y.Z; ..." line (printed on match and
+# mismatch alike). Empty if unavailable.
+last_build_image_kwin() {
+    last_build_plasmazones_log || return 0
+    grep -oP 'PlasmaZones skew check: image KWin=\K[0-9.]+' <<<"${LAST_BUILD_PZ_LOG}" | head -n1
+}
+
+# Appended under the PlasmaZones pinned-version drift section: whether the
+# newer upstream release is actually safe to pin on *this* image. A newer
+# release (or revision) built for a KWin the base image hasn't reached yet
+# would make the effect inert, so "upstream moved" alone isn't "bump now".
+plasmazones_bump_advice() {
+    local latest fedora claim image_kwin
+    latest="$(latest_gh_release "${PLASMAZONES_REPO}")"
+    fedora="$(containerfile_arg BAZZITE_VERSION)"
+    [[ -n "${latest}" && -n "${fedora}" ]] || return 0
+    claim="$(plasmazones_baseline_kwin "v${latest}" "${fedora}")"
+    image_kwin="$(last_build_image_kwin)"
+    log "PlasmaZones bump advice: v${latest} fedora-${fedora} baseline=${claim:-?} image KWin=${image_kwin:-?}"
+
+    {
+        if [[ -z "${claim}" ]]; then
+            echo "Upstream's \`kwin-baseline.json\` for \`v${latest}\` gives no \`fedora-${fedora}\`"
+            echo "KWin, so this can't say whether it suits this image. Check the build"
+            echo "log's skew-check line after bumping."
+        elif [[ -z "${image_kwin}" ]]; then
+            echo "Upstream says \`v${latest}\`'s Fedora ${fedora} package was built against KWin"
+            echo "\`${claim}\`. This image's KWin couldn't be read from the last build log;"
+            echo "compare before bumping."
+        elif [[ "${claim}" == "${image_kwin}" ]]; then
+            echo "Upstream says \`v${latest}\`'s Fedora ${fedora} package was built against KWin"
+            echo "\`${claim}\`, which matches this image's KWin (last build). Bump"
+            echo "\`PLASMAZONES_VERSION\` to \`${latest}\`."
+        else
+            echo "**Don't bump yet.** Upstream says \`v${latest}\`'s Fedora ${fedora} package was"
+            echo "built against KWin \`${claim}\`, but this image runs KWin \`${image_kwin}\`"
+            echo "(last build). Pinning it now would leave the effect inert. Bump once the"
+            echo "base image reaches \`${claim}\`, or when a release for \`${image_kwin}\` appears."
+        fi
+        echo
+    } >>"${REPORT}"
 }
 
 # Compares a build.sh version pin against the upstream project's latest
@@ -155,27 +261,17 @@ check_fedora_currency() {
 # right now". Requires the `gh` CLI, authenticated with read access to this
 # repo's Actions runs (already true for the workflow's own token; locally,
 # `gh auth token` from an authenticated `gh` works the same way the other
-# checks use it).
+# checks use it). On a mismatch it also names the release to pin, from
+# upstream's kwin-baseline.json assets (plasmazones_matching_release, #83).
 check_kwin_skew() {
-    local run_id log_lines kwin_version pinned plugin_vers
+    local run_id log_lines kwin_version pinned plugin_vers fedora match
 
-    if ! command -v gh >/dev/null 2>&1; then
-        log "KWin skew: gh CLI not found, skipping"
+    if ! last_build_plasmazones_log; then
+        log "KWin skew: no usable build log, skipping"
         return 0
     fi
-
-    run_id="$(gh run list --repo "${GH_REPO}" --workflow build.yml --branch main \
-        --status success --limit 1 --json databaseId --jq '.[0].databaseId // empty' 2>/dev/null)"
-    if [[ -z "${run_id}" ]]; then
-        log "KWin skew: no recent successful build.yml run found, skipping"
-        return 0
-    fi
-
-    log_lines="$(gh run view "${run_id}" --repo "${GH_REPO}" --log 2>/dev/null | grep -F 'PlasmaZones')" || log_lines=""
-    if [[ -z "${log_lines}" ]]; then
-        log "KWin skew: couldn't find the skew-check lines in run ${run_id}'s log, skipping"
-        return 0
-    fi
+    run_id="${LAST_BUILD_RUN_ID}"
+    log_lines="${LAST_BUILD_PZ_LOG}"
 
     if grep -qE 'PlasmaZones effect plugin matches image KWin [0-9.]+ — zones will load\.' <<<"${log_lines}"; then
         kwin_version="$(grep -oP 'matches image KWin \K[0-9.]+' <<<"${log_lines}" | head -n1)"
@@ -183,11 +279,19 @@ check_kwin_skew() {
         return 0
     fi
 
-    if grep -qE 'WARNING: PlasmaZones [0-9.]+ is not built against' <<<"${log_lines}"; then
-        pinned="$(grep -oP 'WARNING: PlasmaZones \K[0-9.]+' <<<"${log_lines}" | head -n1)"
+    if grep -qE 'WARNING: PlasmaZones [0-9.]+(-r[0-9]+)? is not built against' <<<"${log_lines}"; then
+        pinned="$(grep -oP 'WARNING: PlasmaZones \K[0-9.]+(-r[0-9]+)?' <<<"${log_lines}" | head -n1)"
         kwin_version="$(grep -oP "this image's KWin \K[0-9.]+" <<<"${log_lines}" | head -n1)"
         plugin_vers="$(grep -oP 'embeds \[\K[^]]*' <<<"${log_lines}" | head -n1)"
         log "KWin skew (build.yml run ${run_id}): image KWin=${kwin_version:-?}; PlasmaZones ${pinned:-?} embeds=[${plugin_vers:-?}]"
+
+        # Name the release to pin, from upstream's kwin-baseline.json (#83).
+        fedora="$(containerfile_arg BAZZITE_VERSION)"
+        match=""
+        if [[ -n "${kwin_version}" && -n "${fedora}" ]]; then
+            match="$(plasmazones_matching_release "${kwin_version}" "${fedora}")"
+        fi
+        log "KWin skew: release claiming fedora-${fedora:-?} KWin ${kwin_version:-?}: ${match:-none}"
 
         {
             echo "### PlasmaZones / KWin version skew"
@@ -198,6 +302,25 @@ check_kwin_skew() {
             echo "\`${pinned:-unknown}\` effect plugin embeds \`${plugin_vers:-no matching version}\`."
             echo "The effect stays inert (zones won't snap) until a matching PlasmaZones"
             echo "release is pinned. See [docs/plasmazones.md](${REPO_URL}/docs/plasmazones.md)."
+            echo
+            if [[ -z "${kwin_version}" || -z "${fedora}" ]]; then
+                :
+            elif [[ -z "${match}" ]]; then
+                echo "None of upstream's 15 most recent releases claims (in its"
+                echo "\`kwin-baseline.json\`) a Fedora ${fedora} build against KWin \`${kwin_version}\`,"
+                echo "so there is nothing to pin yet. Wait for a rebuild, which usually arrives as"
+                echo "an \`-rN\` package revision."
+            elif [[ "${match}" == "${pinned}" ]]; then
+                echo "Upstream's \`kwin-baseline.json\` claims the pinned \`v${match}\` *was* built"
+                echo "against KWin \`${kwin_version}\`, but the installed plugin disagrees. Trust the"
+                echo "plugin, and raise it upstream."
+            else
+                echo "**Suggested fix:** upstream's \`kwin-baseline.json\` says"
+                echo "[\`v${match}\`](https://github.com/${PLASMAZONES_REPO}/releases/tag/v${match})"
+                echo "was built against KWin \`${kwin_version}\` for Fedora ${fedora}. Set the"
+                echo "\`PLASMAZONES_VERSION\` repo variable (or the \`build.sh\` default) to"
+                echo "\`${match}\`, then confirm the build log's skew check says \`matches\`."
+            fi
             echo
         } >>"${REPORT}"
         return 1
@@ -344,7 +467,10 @@ check_template_drift() {
 }
 
 drifted=0
-check_pinned_version "PlasmaZones" "PLASMAZONES_VERSION" "fuddlesworth/PlasmaZones" "docs/plasmazones.md" || drifted=1
+if ! check_pinned_version "PlasmaZones" "PLASMAZONES_VERSION" "${PLASMAZONES_REPO}" "docs/plasmazones.md"; then
+    drifted=1
+    plasmazones_bump_advice
+fi
 check_pinned_version "PowerShell" "PWSH_VERSION" "PowerShell/PowerShell" "docs/powershell.md" || drifted=1
 check_fedora_currency || drifted=1
 check_kwin_skew || drifted=1

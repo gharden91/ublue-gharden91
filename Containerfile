@@ -15,8 +15,8 @@ COPY system_files /system_files
 
 # Base Image
 # Pinned to stable-<BAZZITE_VERSION> (rather than the floating "stable" tag)
-# to keep the Fedora version in lockstep with the fuddlesworth/PlasmaZones
-# COPR, which only ships builds for specific Fedora releases. See
+# to keep the Fedora version in lockstep with the PlasmaZones release RPMs,
+# which only ship builds for specific Fedora releases (.fc<NN>). See
 # docs/README.md's Maintenance Watchlist before bumping the ARG default above
 # to the next Fedora release.
 FROM ghcr.io/ublue-os/bazzite-dx:stable-${BAZZITE_VERSION}
@@ -50,8 +50,9 @@ RUN rm /opt && mkdir /opt
 
 # PowerShell version, overridable at build time (--build-arg PWSH_VERSION=...)
 ARG PWSH_VERSION=7.5.2
-# PlasmaZones version, overridable at build time (--build-arg PLASMAZONES_VERSION=...)
-ARG PLASMAZONES_VERSION=3.5.5
+# PlasmaZones release tag minus the "v" (e.g. 3.5.5 or 3.5.5-r3 for a package
+# revision), overridable at build time (--build-arg PLASMAZONES_VERSION=...)
+ARG PLASMAZONES_VERSION=3.5.5-r3
 
 RUN --mount=type=bind,from=ctx,source=/,target=/ctx \
     --mount=type=cache,dst=/var/cache \
