@@ -75,7 +75,10 @@ bash .github/scripts/file-drift-issue.sh /tmp/drift-report.md   # prints the iss
   successful `build.yml` run's log (`gh run view --log`) rather than pulling
   the base image itself, so it needs `gh` on `PATH` and authenticated with
   read access to this repo's Actions runs — the same `gh` you already used
-  for `GITHUB_TOKEN` above.
+  for `GITHUB_TOKEN` above. When it finds skew, it also reads upstream's
+  `kwin-baseline.json` assets to name the release to pin. When a newer
+  PlasmaZones release exists, it says whether that release suits the image's
+  KWin (see [plasmazones.md](./plasmazones.md#package-revisions--rn-tags)).
 
 **Why `stable-45` and not the floating `stable` tag:** `bazzite-dx:stable`
 tracks whatever Fedora release Bazzite currently ships, and jumps to the next

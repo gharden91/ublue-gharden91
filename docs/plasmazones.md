@@ -49,6 +49,20 @@ curl -fsSL https://github.com/phosphor-works/PlasmaZones/releases/download/v3.5.
 That file is upstream's claim. The build's skew check, which reads the version
 embedded in the installed plugin, is still the ground truth. For 3.5.5 the two
 agreed: r1 claims and embeds 6.8.2, and r3 claims and embeds 6.8.3.
+
+The drift check (`.github/scripts/check-drift.sh`) uses the file in two ways.
+It treats the file only as advice: a missing file or entry means "unknown",
+never "mismatch".
+
+- **On skew:** it walks upstream's 15 most recent releases, newest first, and
+  names the first one whose `fedora-<NN>` entry equals the image's KWin (as
+  the last build logged it). The drift issue then says "set
+  `PLASMAZONES_VERSION` to `3.5.5-r3`". If none matches, it says there is
+  nothing to pin yet.
+- **On a newer upstream release:** it compares that release's `fedora-<NN>`
+  KWin with the image's. It reports whether the bump would work, or that it
+  should wait ("Don't bump yet") because upstream built for a KWin the base
+  image hasn't reached.
 - No third-party repo (COPR or otherwise) is added to the image.
 
 See [local-testing.md](./local-testing.md) for full build/test commands. Verify
@@ -117,7 +131,9 @@ maintenance condition rather than a one-time bug:
 - **The build log is the signal.** On a mismatch the skew check prints
   `WARNING: PlasmaZones … is not built against this image's KWin …`. When you
   see it, bump `PLASMAZONES_VERSION` to a release built against the base
-  image's KWin (see the workarounds below), or wait for one to exist.
+  image's KWin (see the workarounds below), or wait for one to exist. The
+  weekly drift issue names that release for you when one exists (see
+  `kwin-baseline.json` above).
 - **Meanwhile a mismatch is harmless.** KWin never loads a non-matching
   plugin; the only symptom is the notification and zones not working.
 - **Upstream is iterating on this.** 130+ releases; v3.0.17/v3.1.3 specifically
