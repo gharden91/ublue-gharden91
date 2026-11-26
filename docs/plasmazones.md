@@ -257,6 +257,20 @@ The version flows: repo variable `PLASMAZONES_VERSION` → `build.yml` env →
 `just build` (`--build-arg`) → `Containerfile` (`ARG PLASMAZONES_VERSION`) →
 `build.sh`.
 
+**The repo variable reaches every branch's next build at once, `main`
+included.** Nothing reviews it, and it overrides the code's default. Two
+consequences:
+
+- **A typo fails the build at the download, with a bare `curl: (22) … 404`.**
+  `3.5.5-3` (missing the `r`) names no tag, so the URL points at
+  `v3.5.5-3/…` and 404s. When the PlasmaZones `curl` 404s, check the variable
+  against the tag on the releases page first.
+- **A value the code on `main` can't parse breaks `main` until that code
+  merges.** Setting `3.5.5-r3` before revision tags were supported produced
+  `plasmazones-3.5.5-r3-1…` and a 404 on every scheduled build. When a change
+  alters how the variable is read, set the new-style value *after* merging,
+  or delete the variable and let the merged default take over.
+
 - **Architecture:** the release asset name is hardcoded to `x86_64`. If this
   image is ever built for ARM64, check upstream publishes an aarch64 asset and
   make the URL conditional on target arch.
